@@ -1,0 +1,3 @@
+<DnaLibrary Name="SSAddin Excel Add-In" RuntimeVersion="v4.0">
+	<ExternalLibrary Path="SSAddin.dll" LoadFromBytes="true" ExplicitExports="true" Pack="true" />
+</DnaLibrary>
