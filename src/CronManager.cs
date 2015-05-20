@@ -58,7 +58,13 @@ namespace SSAddin {
                 // and next event time 10K is the number of millisecs until the next cron event
                 // for ckey. https://msdn.microsoft.com/en-us/library/system.datetime.ticks%28v=vs.100%29.aspx
                 long ticks = m_Iterator.Current.Ticks - DateTime.Now.Ticks;
-                m_Timer.Interval = Math.Abs( ticks/10000);
+                long interval = Math.Abs( ticks / 10000 );
+                if (interval == 0) {
+                    Logr.Log( String.Format( "ScheduleTimer: ZERO interval! ckey({0}) Current({1}) Now({2})", 
+                                                                            m_Key, m_Iterator.Current, DateTime.Now ) );
+                    return false;
+                }
+                m_Timer.Interval = interval;
                 m_Timer.Enabled = true;
                 Logr.Log( String.Format( "ScheduleTimer: ckey({0}) Current({1}) Now({2})", m_Key, m_Iterator.Current, DateTime.Now ) );
                 return true;

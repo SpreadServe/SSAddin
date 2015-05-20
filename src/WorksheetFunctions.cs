@@ -16,13 +16,14 @@ namespace SSAddin {
         static SSWebClient  s_WebClient = SSWebClient.Instance( );
         static CronManager  s_CronMgr = CronManager.Instance( );
         static string       s_Submitted = "OK";
+        static double s_SSAddinVersion = 0.1;
 		#endregion
 
         #region Regular worksheet functions
 
         [ExcelFunction( Description = "Version info." )]
         public static object s2about( ) {
-            return "SSAddin beta 0.1";
+            return String.Format( "SSAddin {0} Excel {1}", s_SSAddinVersion, ExcelDnaUtil.ExcelVersion );
         }
 
         [ExcelFunction( Description = "Launch quandl query.")]
@@ -118,7 +119,7 @@ namespace SSAddin {
         #endregion
 
         #region RTD functions
-        [ExcelFunction( Description = "Subscribe to properties of S2 cache." )]
+        [ExcelFunction( Description = "RTD: Subscribe to properties of S2 cache." )]
         public static object s2sub(
             [ExcelArgument( Name = "SubCache", Description = "[quandl|cron|websock]" )] string subcache,
             [ExcelArgument(Name="CacheKey", Description="Row key from s2cfg")] string ckey,

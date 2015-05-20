@@ -13,7 +13,8 @@ namespace SSAddin {
         static Logr( ) {
             // Trace goes to /dev/null in Release mode unless some kind of debug tool is used.
             // Need to add a listener to send to localFS. JOS 2015-05-19
-            m_TextOut = new TextWriterTraceListener( System.IO.File.CreateText( "ssaddin.log"));
+            string logpath = String.Format( "{0}\\ssaddin.log", System.IO.Path.GetTempPath( ));
+            m_TextOut = new TextWriterTraceListener( System.IO.File.CreateText( logpath));
             Trace.Listeners.Add( m_TextOut);
         }
 
