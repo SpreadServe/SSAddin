@@ -11,8 +11,6 @@ namespace SSAddin {
         protected static object s_InstanceLock = new object( );
         protected static CronManager s_Instance;
 
-
-
         protected class CronTimer {
             protected IEnumerable<DateTime> m_Schedule;
             protected IEnumerator<DateTime> m_Iterator;
@@ -45,9 +43,14 @@ namespace SSAddin {
                 // I'm not bothering with a lock because the first timer event isn't scheduled until we do
                 // m_Timer.Enabled = true below, and we don't touch the iterator after that, so there's no
                 // chance that we'll have two threads touching m_Iterator at the same time. 
-                if ( !m_Iterator.MoveNext( )) {
-                    Logr.Log( String.Format( "ScheduleTimer: {0} exhausted", m_Key ) );
-                    return false;
+ 
+                // What if the next time we got from m_Iterator is already in the past?
+                // If it is keep moving fwd til we get a time in the future.
+                while ( m_Iterator.Current.CompareTo( DateTime.Now ) <= 0) {
+                    if ( !m_Iterator.MoveNext( )) {
+                        Logr.Log( String.Format( "ScheduleTimer: {0} exhausted", m_Key ) );
+                        return false;
+                    }
                 }
                 m_LastEventTime = DateTime.Now.ToString( );
                 m_NextEventTime = m_Iterator.Current.ToString( );

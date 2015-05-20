@@ -85,6 +85,14 @@ namespace SSAddin {
             return val;
 		}
 
+        [ExcelFunction( Description = "Volatile: pull data from S2 quandl cache.", IsVolatile = true )]
+        public static object s2vqcache(
+            [ExcelArgument( Name = "QueryKey", Description = "quandl query key in s2cfg!C" )] string qkey,
+            [ExcelArgument( Name = "XOffset", Description = "column offset to cache position. 0 default" )] int xoffset,
+            [ExcelArgument( Name = "YOffset", Description = "row offset to cache position. 0 default" )] int yoffset) {
+            return s2qcache( qkey, xoffset, yoffset, null );
+        }
+
         [ExcelFunction( Description = "Pull data from S2 web socket cache." )]
         public static object s2wscache(
             [ExcelArgument( Name = "QueryKey", Description = "websock query key in s2cfg!C" )] string wkey,
@@ -99,6 +107,14 @@ namespace SSAddin {
             }
             return val;
         }
+
+        [ExcelFunction( Description = "Volatile: pull data from S2 web socket cache." )]
+        public static object s2vwscache(
+            [ExcelArgument( Name = "QueryKey", Description = "websock query key in s2cfg!C" )] string wkey,
+            [ExcelArgument( Name = "CellKey", Description = "m2_6_0 for col 3, row 7 on first sheet" )] string ckey) {
+            return s2wscache( wkey, ckey, null );
+        }
+
         #endregion
 
         #region RTD functions
