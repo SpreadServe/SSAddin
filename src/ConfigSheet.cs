@@ -30,7 +30,7 @@ namespace SSAddin {
 
         public String GetCellAsString( int row, int col ) {
             object val = GetCell( row, col);
-            if (val == ExcelEmpty.Value)
+            if ( val == ExcelEmpty.Value)
                 return "";
             return val.ToString( );
         }

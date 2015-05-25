@@ -34,9 +34,9 @@
     <StartupObject />
   </PropertyGroup>
   <ItemGroup>
-    <Reference Include="ExcelDna.Integration, Version=0.32.5236.31783, Culture=neutral, processorArchitecture=MSIL">
+    <Reference Include="ExcelDna.Integration, Version=0.32.5601.25987, Culture=neutral, processorArchitecture=MSIL">
       <SpecificVersion>False</SpecificVersion>
-      <HintPath>..\..\..\bld\ExcelDna-0.32\Source\ExcelDna.Integration\bin\Debug\ExcelDna.Integration.dll</HintPath>
+      <HintPath>..\..\..\bld\ExcelDna-0.32\Source\ExcelDna.Integration\bin\Release\ExcelDna.Integration.dll</HintPath>
     </Reference>
     <Reference Include="NCrontab">
       <HintPath>..\..\..\bld\ncrontab10\src\NCrontab\obj\Debug\NCrontab.dll</HintPath>
@@ -76,25 +76,10 @@
     <Compile Include="WSCallback.cs" />
   </ItemGroup>
   <ItemGroup>
-    <Content Include="LICENSE.txt">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </Content>
     <Content Include="SSAddin.dna">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
-    <Content Include="README.txt">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </Content>
-    <None Include="Install32.bat">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </None>
-    <None Include="Install64.bat">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </None>
     <None Include="packages.config" />
-    <None Include="SSAddin.xlsx">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </None>
   </ItemGroup>
   <ItemGroup />
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
