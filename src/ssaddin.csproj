@@ -84,11 +84,18 @@
   <ItemGroup />
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <PropertyGroup>
-    <PostBuildEvent>echo Build 32-bit version. using ExcelDna.xll
+    <PostBuildEvent>
+echo Build 32 and 64 bit version. using ExcelDna.xll and ExcelDna64.xll
 copy "$(SolutionDir)Packages\Excel-DNA.0.32.0\tools\ExcelDna.xll" "$(TargetDir)SSAddin.xll"
 "$(SolutionDir)Packages\Excel-DNA.0.32.0\tools\ExcelDnaPack.exe" "$(TargetDir)SSAddin.dna" /O "$(TargetDir)SSAddin-Packed.xll" /Y
 copy "$(TargetDir)SSAddin-Packed.xll" "$(TargetDir)SSAddin.xll" /Y
 del "$(TargetDir)SSAddin-Packed.xll"
+
+copy "$(SolutionDir)SSAddin.dna" "$(TargetDir)SSAddin64.dna"
+copy "$(SolutionDir)Packages\Excel-DNA.0.32.0\tools\ExcelDna64.xll" "$(TargetDir)SSAddin64.xll"
+"$(SolutionDir)Packages\Excel-DNA.0.32.0\tools\ExcelDnaPack.exe" "$(TargetDir)SSAddin64.dna" /O "$(TargetDir)SSAddin-Packed64.xll" /Y
+copy "$(TargetDir)SSAddin-Packed64.xll" "$(TargetDir)SSAddin64.xll" /Y
+del "$(TargetDir)SSAddin-Packed64.xll"
 
 </PostBuildEvent>
   </PropertyGroup>
