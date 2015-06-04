@@ -19,8 +19,13 @@ namespace SSAddin {
             protected int m_Count = 0;
             protected String m_LastEventTime = "";
             protected String m_NextEventTime = "";
+            protected bool m_Closed = false;
 
             #region Excel thread
+
+            // Only the Excel thread should touch m_Timer.Enabled. If a pool thread can flip the
+            // state of Enabled we may get race conditions with timers being inadvertently
+            // re-enabled after being switched off.
 
             public CronTimer( String ckey, IEnumerable<DateTime> s ) {
                 m_Key = ckey;
@@ -31,6 +36,18 @@ namespace SSAddin {
                 m_Timer.AutoReset = false;
                 m_Timer.Elapsed += this.OnTimerEvent;
                 ScheduleTimer( );
+                m_Timer.Enabled = true;
+            }
+
+            public void Close( ) {
+                // There's a nasty bug in the Timer class: setting the interval schedules
+                // a timer callback even if Enabled is set false. This means you can't
+                // stop a timer by setting Enabled=false if there is another callback
+                // scheduled, and that callback will set Interval!
+                // https://evolpin.wordpress.com/2014/04/25/the-curious-case-of-system-timers-timer/
+                // So we set a flag to tell the ScheduleTimer( ) method not to touch
+                // m_Timer.Interval. And then hopefully, the GC will do it's stuff...
+                m_Closed = true;
             }
 
             #endregion Excel thread
@@ -38,6 +55,10 @@ namespace SSAddin {
             #region Pool thread
 
             public bool ScheduleTimer( ) {
+                if (m_Closed) {
+                    Logr.Log( String.Format( "ScheduleTimer: {0} is closed", m_Key ) );
+                    return false;
+                }
                 // NB this method is called by the Excel thread in the first instance. Subsequent calls are
                 // on a pool thread, as .Net dispatches timer callbacks on pool threads, unless we specify otherwise.
                 // I'm not bothering with a lock because the first timer event isn't scheduled until we do
@@ -45,27 +66,38 @@ namespace SSAddin {
                 // chance that we'll have two threads touching m_Iterator at the same time. 
  
                 // What if the next time we got from m_Iterator is already in the past?
-                // If it is keep moving fwd til we get a time in the future.
-                while ( m_Iterator.Current.CompareTo( DateTime.Now ) <= 0) {
+                // If it is keep moving fwd til we get a time in the future. Bear in mind there's
+                // an error condition where Current can appear to be in the future when it's not.
+                // If DateTime.Now==2015-06-03T20:03:04.9998700, and Current==2015-06-03T20:03:05
+                // then CompareTo will tell us that Current is in the future, when for our
+                // purposes it's not. If ticks is -ve then Current is in the past. If Current is
+                // a small +/-ve then it's the same as Now since our unit of granularity in the 
+                // cron sys is 1 sec. There are 10,000 ticks to the millisec, 10,000,000 to the sec.
+                // So we'll look for Current to be 1,000,000 ticks later than Now before scheduling.
+                // Which is +1,000,000. If ticks is -ve then Current is in the past. This check 
+                // should also prevent interval==0 below!
+                long ticks = m_Iterator.Current.Ticks - DateTime.Now.Ticks;
+                while ( ticks < 1000000) {
                     if ( !m_Iterator.MoveNext( )) {
                         Logr.Log( String.Format( "ScheduleTimer: {0} exhausted", m_Key ) );
                         return false;
                     }
+                    ticks = m_Iterator.Current.Ticks - DateTime.Now.Ticks;
                 }
                 m_LastEventTime = DateTime.Now.ToString( );
                 m_NextEventTime = m_Iterator.Current.ToString( );
                 // Ticks is number of 100 nanos since 0001-01-01T00:00:00. Diff between now
                 // and next event time 10K is the number of millisecs until the next cron event
                 // for ckey. https://msdn.microsoft.com/en-us/library/system.datetime.ticks%28v=vs.100%29.aspx
-                long ticks = m_Iterator.Current.Ticks - DateTime.Now.Ticks;
+                // 10,000 ticks in 1 millisec
                 long interval = Math.Abs( ticks / 10000 );
                 if (interval == 0) {
+                    // Given the code above, this should not happen!
                     Logr.Log( String.Format( "ScheduleTimer: ZERO interval! ckey({0}) Current({1}) Now({2})", 
                                                                             m_Key, m_Iterator.Current, DateTime.Now ) );
                     return false;
                 }
                 m_Timer.Interval = interval;
-                m_Timer.Enabled = true;
                 Logr.Log( String.Format( "ScheduleTimer: ckey({0}) Current({1}) Now({2})", m_Key, m_Iterator.Current, DateTime.Now ) );
                 return true;
             }
@@ -89,6 +121,7 @@ namespace SSAddin {
                 UpdateRTD( m_Key, "last", m_LastEventTime );
                 UpdateRTD( m_Key, "next", m_NextEventTime );
             }
+
             #endregion Pool thread
         }
 
@@ -115,8 +148,15 @@ namespace SSAddin {
             // no locking here as we won't touch any objects that are shared with another thread
             string[] cronflds = new string[6];
             Logr.Log( String.Format( "AddCron: cronex({0}) start({1}) end({2})", cronex, start, end) );
-
             try {
+                if (m_CronMap.ContainsKey( ckey )) {
+                    // If there's already a timer with ckey it may be that an Excel users has triggered
+                    // another invocation of s2cron( ) by editting the s2cfg sheet, or with a sh-ctrl-alt-F9.
+                    // Either way, we need to remove the old timer, and create a new one. 
+                    CronTimer oldTimer = m_CronMap[ckey];
+                    m_CronMap.Remove( ckey);
+                    oldTimer.Close( );
+                }
                 CrontabSchedule schedule = CrontabSchedule.Parse( cronex );
                 IEnumerable<DateTime> numerable = schedule.GetNextOccurrences( start, end );
                 m_CronMap[ckey] = new CronTimer( ckey, numerable );
