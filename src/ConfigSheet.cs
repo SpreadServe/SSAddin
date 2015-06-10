@@ -119,7 +119,7 @@ namespace SSAddin {
             return GetCellAsString( row, 3 );
         }
 
-        public Tuple<String,DateTime,DateTime> GetCronTab( String ctabkey ) {
+        public Tuple<String,DateTime?,DateTime?> GetCronTab( String ctabkey ) {
             // We're looking for a row that has 'cron' in the first cell, tab in the second,
             // and then ctabkey in the third.
             int row = FindRow( "cron", "tab", ctabkey );
@@ -136,18 +136,18 @@ namespace SSAddin {
                 flds[col] = GetCellAsString( row, col + 3 );
             string cronex = String.Join( " ", flds );
             double dstart, dend;
-            DateTime start = DateTime.Now;  // default to now
-            DateTime end  = new DateTime( start.Year, start.Month, start.Day, 23, 59, 59 );
-            // If the start and end cells on the cron tab entry on the s2cfg page are TIME( )
-            // fun calls they yield DateTime doubles that are < 1.0 as they encode no date/day.
-            // info. But the Interval arithmetic for the next event in CronManager uses
-            // DateTime.Now as a baseline, and that includes date/day info. So we must
-            // baseline off the date/day for today too.
-            DateTime sod = new DateTime( start.Year, start.Month, start.Day, 0, 0, 0 );
+            DateTime? start = null; // return nulls if K & L cols are empty
+            DateTime? end = null;
+            // new DateTime( start.Year, start.Month, start.Day, 23, 59, 59 );
+            // If the start and end cells on the cron tab entry on the s2cfg page are time of
+            // day eg 09:30:00 and not full date times then they yield DateTime doubles that
+            // are < 1.0 as they encode no date/day info. But the Interval arithmetic for the
+            // next event in CronManager uses DateTime.Now as a baseline, and that includes
+            // date/day info. So we must baseline off the date/day for today too.
+            DateTime sod = new DateTime( DateTime.Now.Year, DateTime.Now.Month, DateTime.Now.Day, 0, 0, 0 );
             double dsod = sod.ToOADate( );
             string sstart = GetCellAsString( row, 3 + col++ );
-            string send = GetCellAsString( row, 3+col++);
-            // Add code here to use ToOADate to baseline against today
+            string send = GetCellAsString( row, 3 + col++);
             if (Double.TryParse( sstart, out dstart )) {
                 if ( dstart < 1.0)
                     dstart += dsod;
@@ -158,7 +158,7 @@ namespace SSAddin {
                     dend += dsod;
                 end = DateTime.FromOADate( dend );
             }
-            return new Tuple<String,DateTime,DateTime>( cronex, start, end); 
+            return new Tuple<String,DateTime?,DateTime?>( cronex, start, end); 
         }
 
         public String GetWebSock( String wskey ) {

@@ -12,10 +12,15 @@ namespace SSAddin {
         protected static CronManager s_Instance;
 
         protected class CronTimer {
+            // Keep internal copies of ctor parms
+            protected String m_Key;
+            protected String m_Cronex;
+            protected DateTime? m_Start;
+            protected DateTime? m_End;
+            // Working storage for the timer
             protected IEnumerable<DateTime> m_Schedule;
             protected IEnumerator<DateTime> m_Iterator;
             protected Timer m_Timer;
-            protected String m_Key;
             protected int m_Count = 0;
             protected String m_LastEventTime = "";
             protected String m_NextEventTime = "";
@@ -27,10 +32,19 @@ namespace SSAddin {
             // state of Enabled we may get race conditions with timers being inadvertently
             // re-enabled after being switched off.
 
-            public CronTimer( String ckey, IEnumerable<DateTime> s ) {
+            public CronTimer( String ckey, String cronex, DateTime? start, DateTime? end ) {
+                // Save setup parms so later invocations of AddCron can check whether we need
+                // to create a new instance or not.
                 m_Key = ckey;
-                m_Schedule = s;
-                m_Iterator = s.GetEnumerator( );
+                m_Cronex = cronex;
+                m_Start = start;
+                m_End = end;
+                // Now do the real biz of setting up the timer.
+                DateTime sStart = start ?? DateTime.Now;
+                DateTime sEnd = end ?? new DateTime( sStart.Year, sStart.Month, sStart.Day, 23, 59, 59 );
+                CrontabSchedule schedule = CrontabSchedule.Parse( cronex );
+                m_Schedule = schedule.GetNextOccurrences( sStart, sEnd );
+                m_Iterator = m_Schedule.GetEnumerator( );
                 m_Timer = new System.Timers.Timer( );
                 m_Timer.Enabled = false;
                 m_Timer.AutoReset = false;
@@ -48,6 +62,18 @@ namespace SSAddin {
                 // So we set a flag to tell the ScheduleTimer( ) method not to touch
                 // m_Timer.Interval. And then hopefully, the GC will do it's stuff...
                 m_Closed = true;
+            }
+
+            public string Cronex {
+                get { return m_Cronex; }
+            }
+
+            public DateTime? Start {
+                get { return m_Start; }
+            }
+
+            public DateTime? End {
+                get { return m_End; }
             }
 
             #endregion Excel thread
@@ -144,7 +170,7 @@ namespace SSAddin {
 
         }
 
-        public bool AddCron( string ckey, string cronex, DateTime start, DateTime end) {
+        public bool AddCron( string ckey, string cronex, DateTime? start, DateTime? end) {
             // no locking here as we won't touch any objects that are shared with another thread
             string[] cronflds = new string[6];
             Logr.Log( String.Format( "AddCron: cronex({0}) start({1}) end({2})", cronex, start, end) );
@@ -152,14 +178,18 @@ namespace SSAddin {
                 if (m_CronMap.ContainsKey( ckey )) {
                     // If there's already a timer with ckey it may be that an Excel users has triggered
                     // another invocation of s2cron( ) by editting the s2cfg sheet, or with a sh-ctrl-alt-F9.
-                    // Either way, we need to remove the old timer, and create a new one. 
+                    // Either way, we need to remove the old timer, and create a new one, but only if the
+                    // new one is different.
                     CronTimer oldTimer = m_CronMap[ckey];
+                    if (oldTimer.Cronex == cronex && oldTimer.Start == start && oldTimer.End == end) {
+                        // no change, so we won't overwrite the entry for ckey
+                        return true;
+                    }
                     m_CronMap.Remove( ckey);
                     oldTimer.Close( );
                 }
-                CrontabSchedule schedule = CrontabSchedule.Parse( cronex );
-                IEnumerable<DateTime> numerable = schedule.GetNextOccurrences( start, end );
-                m_CronMap[ckey] = new CronTimer( ckey, numerable );
+ 
+                m_CronMap[ckey] = new CronTimer( ckey, cronex, start, end );
                 return true;
             }
             catch (Exception ex) {

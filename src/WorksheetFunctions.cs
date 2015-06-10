@@ -44,7 +44,7 @@ namespace SSAddin {
         public static object s2cron(
             [ExcelArgument( Name = "CronKey", Description = "cron tab key in s2cfg!C" )] string ckey)
         {
-            Tuple<String,DateTime,DateTime> tup = s_ConfigSheet.GetCronTab( ckey );
+            Tuple<String,DateTime?,DateTime?> tup = s_ConfigSheet.GetCronTab( ckey );
             if (tup == null) {
                 return ExcelMissing.Value;
             }
