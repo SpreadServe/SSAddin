@@ -132,8 +132,10 @@ namespace SSAddin {
                 // The RTD server doesn't necessarily exist. If no cell calls 
                 // s2sub( ) it won't be instanced by Excel.
                 RTDServer rtd = RTDServer.GetInstance( );
-                if (rtd == null)
+                if (rtd == null) {
+                    Logr.Log( String.Format( "UpdateRTD: no RTD server!") );
                     return;
+                }
                 string stopic = String.Format( "cron.{0}.{1}", qkey, subelem );
                 rtd.CacheUpdate( stopic, value );
             }
@@ -197,6 +199,18 @@ namespace SSAddin {
                 return false;
             }
         }
+
+        public void Clear( ) {
+            // Called from RTDServer.ServerTerminate( ), which gets called when a sheet is shut down.
+            // That means we have to stop the timers associated with that sheet. There is a bug lurking here,
+            // because if a single Excel process has two workbooks open, and both create cron timers, and then
+            // one is shut, both sets of timers will be cleared down. We'll leave that corner case for later...
+            foreach (KeyValuePair<String, CronTimer> entry in m_CronMap) {
+                entry.Value.Close( );   // stop the timer
+            }
+            m_CronMap.Clear( );
+        }
+
         #endregion Excel thread
     }
 }

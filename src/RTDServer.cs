@@ -47,15 +47,13 @@ namespace SSAddin {
 
         protected override bool ServerStart( ) {
             Logr.Log( "~A RTDServer.ServerStart" );
-            // QuandlClient qc = QuandlClient.Instance( );
-            // qc.SetRTDServer( this );
             return true;
         }
 
         protected override void ServerTerminate( ) {
             Logr.Log( "~A RTDServer.ServerTerminate" );
-            // QuandlClient qc = QuandlClient.Instance( );
-            // qc.SetRTDServer( null );
+            // Clear down any running timers...
+            CronManager.Instance( ).Clear( );
             s_Instances.Remove( this );
         }
 
@@ -85,10 +83,13 @@ namespace SSAddin {
 
         public void CacheUpdate( string stopic, string value ) {
             lock (m_TopicMap) {
-                Logr.Log( String.Format( "~A CacheUpdate {0} {1}", stopic, value ) );
+                Logr.Log( String.Format( "~A CacheUpdate topic({0}) val({1})", stopic, value ) );
                 if (m_TopicMap.ContainsKey( stopic )) {
                     Topic topic = m_TopicMap[stopic];
                     topic.UpdateValue( value );
+                }
+                else {
+                    Logr.Log( String.Format( "~A CacheUpdate UNKNOWN topic({0}) val({1})", stopic, value ) );
                 }
             }
         }
