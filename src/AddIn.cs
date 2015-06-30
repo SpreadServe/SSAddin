@@ -9,10 +9,7 @@ namespace SSAddin {
 
 		public void AutoOpen( ) {
             Logr.Log( "AutoOpen" );
-			ExcelIntegration.RegisterUnhandledExceptionHandler(e => "ERROR: " + (e as Exception).Message);
-			//var excel = (Microsoft.Office.Interop.Excel.Application)ExcelDnaUtil.Application;
-			//var xllPath = (string)XlCall.Excel(XlCall.xlGetName);
-			//excel.AddIns.Add(xllPath, false /* don't copy file */).Installed = true;
+			ExcelIntegration.RegisterUnhandledExceptionHandler( e => "EXCEPTION: " + (e as Exception).Message);
 		}
 
 		public void AutoClose( ) {
