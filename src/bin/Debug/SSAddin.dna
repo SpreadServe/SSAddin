@@ -1,3 +1,10 @@
-<DnaLibrary Name="SSAddin Excel Add-In" RuntimeVersion="v4.0">
+<DnaLibrary Name="SpreadServe Addin" RuntimeVersion="v4.0">
 	<ExternalLibrary Path="SSAddin.dll" LoadFromBytes="true" ExplicitExports="true" Pack="true" />
+    <Reference AssemblyPath="NCrontab.dll" Pack="true" />
+    <Reference AssemblyPath="Newtonsoft.Json.dll" Pack="true" />
+    <Reference AssemblyPath="ExcelDna.Integration.dll" Pack="true" />
+    <Reference AssemblyPath="SuperSocket.ClientEngine.Common.dll" Pack="true" />
+    <Reference AssemblyPath="SuperSocket.ClientEngine.Core.dll" Pack="true" />
+    <Reference AssemblyPath="SuperSocket.ClientEngine.Protocol.dll" Pack="true" />
+    <Reference AssemblyPath="WebSocket4Net.dll" Pack="true" />
 </DnaLibrary>

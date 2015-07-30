@@ -23,6 +23,7 @@ namespace SSAddin {
         protected Thread            m_WorkerThread;     // for executing the web query
         protected ManualResetEvent  m_Event;            // control worker thread sleep
         protected String            m_TempDir;
+        protected int               m_QuandlCount;        // total number of quandl queries
 
 
         #region Excel thread methods
@@ -36,6 +37,13 @@ namespace SSAddin {
             m_Event = new ManualResetEvent( false);
             m_WorkerThread = new Thread( BackgroundWork );
             m_WorkerThread.Start( );
+            m_QuandlCount = 0;
+
+            // Push out an RTD update for the overall quandl query count. This will mean
+            // that trigger parms driven by quandl.all.count don't have #N/A as input for
+            // long, which will enable eg ycb_pub_quandl.xls qlPiecewiseYieldCurve to
+            // calc almost immediately. JOS 2015-07-29
+            UpdateRTD( "all", "count", String.Format( "{0}", m_QuandlCount++));
         }
 
         public static SSWebClient Instance( ) {
@@ -179,7 +187,7 @@ namespace SSAddin {
                 data.Close();
                 reader.Close();
                 UpdateRTD( qkey, "status", "complete" );
-                // TODO: add code here to report query status via RTD
+                UpdateRTD( "all", "count", String.Format( "{0}", m_QuandlCount++ ) );
                 Logr.Log( String.Format( "quandl qkey({0}) complete count({1})", qkey, lineCount));
                 return true;
 			}
