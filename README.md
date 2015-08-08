@@ -12,3 +12,6 @@ SSAddin enables the creation of cron style timer jobs in Excel that trigger RTD 
 
 ## Web sockets
 SSAddin supports subscription to live ticking web data via web sockets.
+
+## Documentation
+http://spreadserve-addin.readthedocs.org/en/latest/index.html
