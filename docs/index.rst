@@ -13,6 +13,7 @@ Contents:
    
    install
    functions
+   config
 
 
 Indices and tables
