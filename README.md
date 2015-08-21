@@ -1,5 +1,5 @@
 # SSAddin
-SSAddin, the SpreadServe Addin is a conventional Excel XLL addin implemented in C#. It has no build or run time dependencies on the `SpreadServe <http://spreadserve.com>`_ server runtime, and can be used independently in a regular desktop Excel installation, or in `SpreadServe <http://spreadserve.com>`_ itself. SSAddin supports quandl, cron style scheduled execution, and web socket live updates. SSAddin is freely available under the Apache License 2.0
+SSAddin, the SpreadServe Addin is a conventional Excel XLL addin implemented in C#. It has no build or run time dependencies on the [SpreadServe](http://spreadserve.com>) server runtime, and can be used independently in a regular desktop Excel installation, or in [SpreadServe](http://spreadserve.com>) itself. SSAddin supports quandl, cron style scheduled execution, and web socket live updates. SSAddin is freely available under the Apache License 2.0
 
 ## Acknowledgements
 SSAddin builds on several other excellent OSS projects: Excel-DNA, NCrontab, WebSockets4Net and JSON.NET. We use a modified NCrontab that extends Unix style cron schedules to allow more finegrained timing specifications using seconds as well as minutes, hours, days and days of the week.
