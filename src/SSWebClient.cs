@@ -62,7 +62,8 @@ namespace SSAddin {
             // that trigger parms driven by quandl.all.count don't have #N/A as input for
             // long, which will enable eg ycb_pub_quandl.xls qlPiecewiseYieldCurve to
             // calc almost immediately. JOS 2015-07-29
-            UpdateRTD( "all", "count", String.Format( "{0}", m_QuandlCount++));
+            UpdateRTD( "quandl", "all", "count", String.Format( "{0}", m_QuandlCount++));
+            UpdateRTD( "tiingo", "all", "count", String.Format( "{0}", m_TiingoCount++ ) );
         }
 
         public static SSWebClient Instance( ) {
@@ -172,13 +173,13 @@ namespace SSAddin {
             }
         }
 
-        protected void UpdateRTD( string qkey, string subelem, string value ) {
+        protected void UpdateRTD( string subcache, string qkey, string subelem, string value ) {
             // The RTD server doesn't necessarily exist. If no cell calls 
             // s2sub( ) it won't be instanced by Excel.
             RTDServer rtd = RTDServer.GetInstance( );
             if ( rtd == null)
                 return;
-            string stopic = String.Format( "quandl.{0}.{1}", qkey, subelem );
+            string stopic = String.Format( "{0}.{1}.{2}", subcache, qkey, subelem );
             rtd.CacheUpdate( stopic, value );
         }
 
@@ -197,7 +198,7 @@ namespace SSAddin {
                 string csvfname = String.Format( "{0}\\{1}_{2}.csv", m_TempDir, qkey, pid );
                 Logr.Log( String.Format( "running quandl qkey({0}) {1} persisted at {2}", qkey, url, csvfname));
                 var csvf = new StreamWriter( csvfname );
-                UpdateRTD( qkey, "status", "starting" );
+                UpdateRTD( "quandl", qkey, "status", "starting" );
                 // Clear any previous result from the cache so we don't append repeated data
                 s_Cache.ClearQuandl( qkey );
                 while ( reader.Peek( ) >= 0) {
@@ -206,13 +207,13 @@ namespace SSAddin {
                     line = reader.ReadLine( );
                     csvf.WriteLine( line );
                     lineCount = String.Format( "{0}", s_Cache.AddQuandlLine( qkey, line.Split( csvDelimiterChars)));
-                    UpdateRTD( qkey, "count", lineCount );
+                    UpdateRTD( "quandl", qkey, "count", lineCount );
                 }
                 csvf.Close( );
                 data.Close();
                 reader.Close();
-                UpdateRTD( qkey, "status", "complete" );
-                UpdateRTD( "all", "count", String.Format( "{0}", m_QuandlCount++ ) );
+                UpdateRTD( "quandl", qkey, "status", "complete" );
+                UpdateRTD( "quandl", "all", "count", String.Format( "{0}", m_QuandlCount++ ) );
                 Logr.Log( String.Format( "quandl qkey({0}) complete count({1})", qkey, lineCount));
                 return true;
 			}
@@ -240,7 +241,7 @@ namespace SSAddin {
                 string jsnfname = String.Format( "{0}\\{1}_{2}.jsn", m_TempDir, qkey, pid );
                 Logr.Log( String.Format( "running tiingo qkey({0}) {1} persisted at {2}", qkey, url, jsnfname ) );
                 var jsnf = new StreamWriter( jsnfname );
-                UpdateRTD( qkey, "status", "starting" );
+                UpdateRTD( "tiingo", qkey, "status", "starting" );
                 // Clear any previous result from the cache so we don't append repeated data
                 s_Cache.ClearTiingo( qkey );
                 StringBuilder sb = new StringBuilder( );
@@ -254,12 +255,13 @@ namespace SSAddin {
                 jsnf.Close( );
                 data.Close( );
                 reader.Close( );
-                UpdateRTD( qkey, "status", "complete" );
-                UpdateRTD( "all", "count", String.Format( "{0}", m_TiingoCount++ ) );
+                UpdateRTD( "tiingo", qkey, "status", "complete" );
+                UpdateRTD( "tiingo", "all", "count", String.Format( "{0}", m_TiingoCount++ ) );
                 Logr.Log( String.Format( "tiingo qkey({0}) complete count({1})", qkey, lineCount ) );
                 // TODO: cache the results
                 List<SSTiingoHistPrice> updates = JsonConvert.DeserializeObject<List<SSTiingoHistPrice>>( sb.ToString( ));
                 s_Cache.UpdateTHPCache( qkey, updates );
+                UpdateRTD( "tiingo", qkey, "count", String.Format( "{0}", updates.Count) );
                 return true;
             }
             catch (System.IO.IOException ex) {

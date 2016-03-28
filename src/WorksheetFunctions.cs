@@ -164,7 +164,7 @@ namespace SSAddin {
         #region RTD functions
         [ExcelFunction( Description = "RTD: Subscribe to properties of S2 cache." )]
         public static object s2sub(
-            [ExcelArgument( Name = "SubCache", Description = "[quandl|cron|websock]" )] string subcache,
+            [ExcelArgument( Name = "SubCache", Description = "[quandl|tiingo|cron|websock]" )] string subcache,
             [ExcelArgument(Name="CacheKey", Description="Row key from s2cfg")] string ckey,
             [ExcelArgument(Name="Property", Description="[status|count|next|last|mX_Y_Z]")] string prop)
         {
