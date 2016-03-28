@@ -12,6 +12,7 @@
     <TargetFrameworkVersion>v4.0</TargetFrameworkVersion>
     <FileAlignment>512</FileAlignment>
     <TargetFrameworkProfile>Client</TargetFrameworkProfile>
+    <ExcelDnaRoot>C:\osullivj\src\ExcelDna\Source</ExcelDnaRoot>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
     <DebugSymbols>true</DebugSymbols>
@@ -34,9 +35,9 @@
     <StartupObject />
   </PropertyGroup>
   <ItemGroup>
-    <Reference Include="ExcelDna.Integration, Version=0.32.5601.25987, Culture=neutral, processorArchitecture=MSIL">
+    <Reference Include="ExcelDna.Integration, Version=0.33.5720.29145, Culture=neutral, processorArchitecture=MSIL">
       <SpecificVersion>False</SpecificVersion>
-      <HintPath>..\..\..\bld\ExcelDna-0.32\Source\ExcelDna.Integration\bin\Release\ExcelDna.Integration.dll</HintPath>
+      <HintPath>Packages\Excel-DNA.0.32.0\lib\ExcelDna.Integration.dll</HintPath>
     </Reference>
     <Reference Include="NCrontab">
       <HintPath>..\..\..\bld\ncrontab10\src\NCrontab\obj\Debug\NCrontab.dll</HintPath>
@@ -86,17 +87,16 @@
   <PropertyGroup>
     <PostBuildEvent>
 echo Build 32 and 64 bit version. using ExcelDna.xll and ExcelDna64.xll
-copy "$(SolutionDir)Packages\Excel-DNA.0.32.0\tools\ExcelDna.xll" "$(TargetDir)SSAddin.xll"
-"$(SolutionDir)Packages\Excel-DNA.0.32.0\tools\ExcelDnaPack.exe" "$(TargetDir)SSAddin.dna" /O "$(TargetDir)SSAddin-Packed.xll" /Y
+copy "$(ProjectDir)\Packages\Excel-DNA.0.32.0\tools\ExcelDna.xll" "$(TargetDir)SSAddin.xll"
+"$(ProjectDir)\Packages\Excel-DNA.0.32.0\tools\ExcelDnaPack.exe" "$(TargetDir)SSAddin.dna" /O "$(TargetDir)SSAddin-Packed.xll" /Y
 copy "$(TargetDir)SSAddin-Packed.xll" "$(TargetDir)SSAddin.xll" /Y
 del "$(TargetDir)SSAddin-Packed.xll"
 
 copy "$(SolutionDir)SSAddin.dna" "$(TargetDir)SSAddin64.dna"
-copy "$(SolutionDir)Packages\Excel-DNA.0.32.0\tools\ExcelDna64.xll" "$(TargetDir)SSAddin64.xll"
-"$(SolutionDir)Packages\Excel-DNA.0.32.0\tools\ExcelDnaPack.exe" "$(TargetDir)SSAddin64.dna" /O "$(TargetDir)SSAddin-Packed64.xll" /Y
+copy "$(ProjectDir)\Packages\Excel-DNA.0.32.0\tools\ExcelDna64.xll" "$(TargetDir)SSAddin64.xll"
+"$(ProjectDir)\Packages\Excel-DNA.0.32.0\tools\ExcelDnaPack.exe" "$(TargetDir)SSAddin64.dna" /O "$(TargetDir)SSAddin-Packed64.xll" /Y
 copy "$(TargetDir)SSAddin-Packed64.xll" "$(TargetDir)SSAddin64.xll" /Y
 del "$(TargetDir)SSAddin-Packed64.xll"
-
 </PostBuildEvent>
   </PropertyGroup>
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 

@@ -41,7 +41,7 @@ sheet for configuration...
       ``rows`` and column G ``5`` so that ``?rows=5`` is appended to the URL query submitted
       to quandl.
     * ``config``: column pairs from  C & D onwards are reserved for name value pairs that
-      apply to all queries. Currently only ``auth_key`` is supported. If you put ``auth_key``
+      apply to all queries. Currently only ``auth_token`` is supported. If you put ``auth_token``
       in column C, then put your actual key in column D for it to be added to all queries.
   
   * ``cron``: when column B contains ``tab`` then column C should have a unique ``CronKey``

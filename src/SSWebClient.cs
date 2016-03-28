@@ -7,9 +7,27 @@ using System.IO;
 using System.Net;
 using System.Diagnostics;
 using NCrontab;
+using Newtonsoft.Json;
 
 
 namespace SSAddin {
+    #region Deserialization classes
+    // rtwebsvr websock format
+    class SSTiingoHistPrice {
+        public string   date { get; set; }
+        public float    open { get; set; }
+        public float    close { get; set; }
+        public float    high { get; set; }
+        public float    low { get; set; }
+        public int      volume { get; set; }
+        public float    adjOpen { get; set; }
+        public float    adjClose { get; set; }
+        public float    adjHigh { get; set; }
+        public float    adjLow { get; set; }
+        public int      adjVolume { get; set; }
+    }
+    #endregion
+
     class SSWebClient {
         protected static DataCache      s_Cache = DataCache.Instance( );
         protected static char[]         csvDelimiterChars = { ',' };
@@ -24,7 +42,7 @@ namespace SSAddin {
         protected ManualResetEvent  m_Event;            // control worker thread sleep
         protected String            m_TempDir;
         protected int               m_QuandlCount;        // total number of quandl queries
-
+        protected int               m_TiingoCount;        // total number of quandl queries
 
         #region Excel thread methods
 
@@ -38,6 +56,7 @@ namespace SSAddin {
             m_WorkerThread = new Thread( BackgroundWork );
             m_WorkerThread.Start( );
             m_QuandlCount = 0;
+            m_TiingoCount = 0;
 
             // Push out an RTD update for the overall quandl query count. This will mean
             // that trigger parms driven by quandl.all.count don't have #N/A as input for
@@ -58,7 +77,7 @@ namespace SSAddin {
         }
 
 
-        public bool AddRequest( string type, string key, String url) {
+        public bool AddRequest( string type, string key, String url, String auth_token="") {
             // Is this job pending or in progress?
             string fkey = String.Format( "{0}.{1}", type, key);
             lock (m_InFlight) {
@@ -69,8 +88,8 @@ namespace SSAddin {
                 lock (m_InputQueue) {
                     // Running on the main Excel thread here. Q the work, and
                     // signal the background thread to wake up...
-                    Logr.Log( String.Format( "~A AddRequest adding {0} {1} {2}", type, key, url ) );
-                    String[] req = { type, key, url};
+                    Logr.Log( String.Format( "~A AddRequest adding {0} {1} {2} {3}", type, key, url, auth_token ) );
+                    String[] req = { type, key, url, auth_token};
                     m_InputQueue.Enqueue( req);
                 }
                 m_InFlight.Add( fkey);
@@ -132,7 +151,13 @@ namespace SSAddin {
                             m_InFlight.Remove( fkey );
                         }
                     }
-                    else if ( work[0] == "websock") {
+                    else if (work[0] == "tiingo") {
+                        bool ok = DoTiingoQuery( work[1], work[2], work[3] );
+                        lock (m_InFlight) {
+                            m_InFlight.Remove( fkey );
+                        }
+                    }
+                    else if (work[0] == "websock") {
                         WSCallback wscb = new WSCallback( work[1], work[2], this.WSCallbackClosed );
                         lock (m_InFlight) {
                             m_WSCallbacks.Add( fkey, wscb );
@@ -199,6 +224,52 @@ namespace SSAddin {
             }
             return false;
 		}
+
+        protected bool DoTiingoQuery( string qkey, string url, string auth_token ) {
+            try {
+                string line = "";
+                string lineCount = "0";
+                // Set up the web client to HTTP GET
+                var client = new WebClient( );
+                client.Headers.Set( "Content-Type", "application/json" );
+                client.Headers.Set( "Authorization", auth_token );
+                Stream data = client.OpenRead( url );
+                var reader = new StreamReader( data );
+                // Local file to dump result
+                int pid = Process.GetCurrentProcess( ).Id;
+                string jsnfname = String.Format( "{0}\\{1}_{2}.jsn", m_TempDir, qkey, pid );
+                Logr.Log( String.Format( "running tiingo qkey({0}) {1} persisted at {2}", qkey, url, jsnfname ) );
+                var jsnf = new StreamWriter( jsnfname );
+                UpdateRTD( qkey, "status", "starting" );
+                // Clear any previous result from the cache so we don't append repeated data
+                s_Cache.ClearTiingo( qkey );
+                StringBuilder sb = new StringBuilder( );
+                while (reader.Peek( ) >= 0) {
+                    // For each CSV line returned by quandl, dump to localFS, add to in mem cache, and 
+                    // send a line count update to any RTD subscriber
+                    line = reader.ReadLine( );
+                    jsnf.WriteLine( line );
+                    sb.AppendLine( line );
+                }
+                jsnf.Close( );
+                data.Close( );
+                reader.Close( );
+                UpdateRTD( qkey, "status", "complete" );
+                UpdateRTD( "all", "count", String.Format( "{0}", m_TiingoCount++ ) );
+                Logr.Log( String.Format( "tiingo qkey({0}) complete count({1})", qkey, lineCount ) );
+                // TODO: cache the results
+                List<SSTiingoHistPrice> updates = JsonConvert.DeserializeObject<List<SSTiingoHistPrice>>( sb.ToString( ));
+                s_Cache.UpdateTHPCache( qkey, updates );
+                return true;
+            }
+            catch (System.IO.IOException ex) {
+                Logr.Log( String.Format( "tiingo qkey({0}) {1}", qkey, ex ) );
+            }
+            catch (System.Net.WebException ex) {
+                Logr.Log( String.Format( "tiingo  qkey({0}) {1}", qkey, ex ) );
+            }
+            return false;
+        }
         #endregion
     }
 }

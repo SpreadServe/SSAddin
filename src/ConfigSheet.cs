@@ -14,12 +14,16 @@ namespace SSAddin {
 
     class ConfigSheet {
 
-        protected static String s_BaseURL = "https://www.quandl.com/api/v1/datasets";
+        protected static String s_QuandlBaseURL = "https://www.quandl.com/api/v1/datasets";
+        protected static String s_TiingoBaseURL = "https://api.tiingo.com/tiingo";
         protected static Dictionary<string, Func<object, string>> s_QuandlQueryFieldConverters = new Dictionary<string, Func<object, string>>( );
+        protected static Dictionary<string, Func<object, string>> s_TiingoQueryFieldConverters = new Dictionary<string, Func<object, string>>( );
 
         public ConfigSheet( ) {
             s_QuandlQueryFieldConverters["trim_start"] = ExcelDateNumberToString;
             s_QuandlQueryFieldConverters["trim_end"] = ExcelDateNumberToString;
+            s_TiingoQueryFieldConverters["startDate"] = ExcelDateNumberToString;
+            s_TiingoQueryFieldConverters["endDate"] = ExcelDateNumberToString;
         }
 
         public object GetCell( int row, int col ) {
@@ -46,11 +50,11 @@ namespace SSAddin {
         public String BuildQuandlQuery( Dictionary<string, object> qterms ) {
             if ( !qterms.ContainsKey( "dataset"))
                 return "";
-            StringBuilder sb = new StringBuilder( s_BaseURL);
+            StringBuilder sb = new StringBuilder( s_QuandlBaseURL);
             sb.Append( String.Format( "/{0}.csv", qterms["dataset"]));
             qterms.Remove( "dataset");
             string prefix = "?";
-            string auth_token = GetQuandlConfig( "auth_token" );
+            string auth_token = GetQueryConfig( "quandl", "auth_token" );
             if (auth_token != "") {
                 sb.Append( String.Format( "{0}{1}={2}", prefix, "auth_token", auth_token ) );
                 prefix = "&";
@@ -66,6 +70,38 @@ namespace SSAddin {
                 }
                 sb.Append( String.Format( "{0}{1}={2}", prefix, item.Key, val));
                 prefix = "&";
+            }
+            return sb.ToString( );
+        }
+
+        public String BuildTiingoQuery( Dictionary<string, object> qterms ) {
+            // Must specify a ticker symbol and a root (daily|funds)
+            if (!qterms.ContainsKey( "ticker" ) || !qterms.ContainsKey("root"))
+                return "";
+            // Now deal with the minimal essential we need to build a valid tiingo query
+            StringBuilder sb = new StringBuilder( s_TiingoBaseURL );
+            sb.Append( String.Format( "/{0}/{1}", qterms["root"], qterms["ticker"] ) );
+            qterms.Remove( "ticker" );
+            qterms.Remove( "root" );
+            if (qterms.ContainsKey( "leaf" )) {
+                sb.Append( String.Format( "/{0}", qterms["leaf"] ) );
+                qterms.Remove( "leaf" );
+            }
+            // Are there any more values in the Dict? Maybe startDate and endDate...
+            if (qterms.Count > 0) {
+                string prefix = "?";
+                string val;
+                foreach (KeyValuePair<string, object> item in qterms) {
+                    if (s_TiingoQueryFieldConverters.ContainsKey( item.Key )) {
+                        Func<object, string> converter = s_TiingoQueryFieldConverters[item.Key];
+                        val = converter( item.Value );
+                    }
+                    else {
+                        val = item.Value.ToString( );
+                    }
+                    sb.Append( String.Format( "{0}{1}={2}", prefix, item.Key, val ) );
+                    prefix = "&";
+                }
             }
             return sb.ToString( );
         }
@@ -86,12 +122,12 @@ namespace SSAddin {
             return -1;
         }
 
-        public String GetQuandlQuery( String qkey) {
+        public String GetQueryURL( String qtype, String qkey) {
             // We're looking for a row that has 'quandl' in the first cell, query in the second,
             // and then qkey in the third.
-            int row = FindRow( "quandl", "query", qkey);
+            int row = FindRow( qtype, "query", qkey);
             if (row == -1) {
-                Logr.Log( String.Format( "GetQuandlQuery: couldn't find {0}", qkey));
+                Logr.Log( String.Format( "GetQueryURL: couldn't find {0}.{1}", qtype, qkey ) );
                 return "";
             }
             int col = 3;
@@ -105,15 +141,17 @@ namespace SSAddin {
                    qterms.Add( name, val );
                 col += 2;
             } while (name != null && name != "");
-            return BuildQuandlQuery( qterms );
+            if ( qtype == "quandl")
+                return BuildQuandlQuery( qterms );
+            return BuildTiingoQuery( qterms );
         }
 
-        public String GetQuandlConfig( String ckey ) {
-            // We're looking for a row that has 'quandl' in the first cell, config in the second,
+        public String GetQueryConfig( String qtype, String ckey ) {
+            // We're looking for a row that has qtype [quandl|tiingo] in the first cell, config in the second,
             // and then ckey in the third.
-            int row = FindRow( "quandl", "config", ckey );
+            int row = FindRow( qtype, "config", ckey );
             if (row == -1) {
-                Logr.Log( String.Format( "GetQuandlConfig: couldn't find {0}", ckey));
+                Logr.Log( String.Format( "GetQueryConfig: couldn't find {0}.{1}", qtype, ckey ) );
                 return "";
             }
             return GetCellAsString( row, 3 );
@@ -124,7 +162,7 @@ namespace SSAddin {
             // and then ctabkey in the third.
             int row = FindRow( "cron", "tab", ctabkey );
             if (row == -1) {
-                Logr.Log( String.Format( "GetQuandlQuery: couldn't find {0}", ctabkey ) );
+                Logr.Log( String.Format( "GetCronTab: couldn't find {0}", ctabkey ) );
                 return null;
             }
             // Now we've found the right row we expect to find six columns to make up a 

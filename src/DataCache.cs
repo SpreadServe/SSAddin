@@ -1,14 +1,16 @@
 ﻿using System;
+using System.Reflection;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 
 namespace SSAddin {
-    // DataCache is the cache for non real time data like quandl historical data result sets.
-    // DataCache needs to be thread safe so worker threads can push data in, and the Excel
-    // thread can pull data out. 
+    // DataCache is the cache for non real time data like tiingo and quandl historical data result sets.
+    // It also caches web socket data too. DataCache needs to be thread safe so worker threads can push
+    // data in, and the Excel thread can pull data out. 
     class DataCache {
         protected Dictionary<string,List<String[]>> m_QCache = new Dictionary<string, List<String[]>>( );
+        protected Dictionary<string, List<SSTiingoHistPrice>> m_THPCache = new Dictionary<string, List<SSTiingoHistPrice>>( );
         protected Dictionary<string, string> m_WSCache = new Dictionary<string, string>( );
         protected static DataCache s_Instance;
         protected static object s_InstanceLock = new object( );
@@ -47,6 +49,12 @@ namespace SSAddin {
             }
         }
 
+        public void UpdateTHPCache( string wkey, List<SSTiingoHistPrice> updates ) {
+            lock (m_THPCache) {
+                m_THPCache[wkey] = updates;
+            }
+        }
+
         public bool ContainsQuandlKey( string qkey ) {
             lock (m_QCache) {
                 return m_QCache.ContainsKey( qkey );
@@ -57,6 +65,19 @@ namespace SSAddin {
             lock (m_QCache) {
                 if ( m_QCache.ContainsKey( qkey))
                     m_QCache.Remove( qkey );
+            }
+        }
+
+        public bool ContainsTiingoKey( string qkey ) {
+            lock (m_THPCache) {
+                return m_THPCache.ContainsKey( qkey );
+            }
+        }
+
+        public void ClearTiingo( string qkey ) {
+            lock (m_THPCache) {
+                if (m_THPCache.ContainsKey( qkey ))
+                    m_THPCache.Remove( qkey );
             }
         }
 
@@ -71,6 +92,23 @@ namespace SSAddin {
                 if (col >= sarray.Length)
                     return null;
                 return sarray[col];
+            }
+        }
+
+        public string GetTiingoCell( string qkey, int row, int col ) {
+            lock (m_THPCache) {
+                if (!m_THPCache.ContainsKey( qkey ))
+                    return null;
+                List<SSTiingoHistPrice> thplist = m_THPCache[qkey];
+                if (row >= thplist.Count)
+                    return null;
+                SSTiingoHistPrice thp = thplist.ElementAt( row );
+                PropertyInfo[] piarr = thp.GetType( ).GetProperties( );
+                // String[] sarray = slist.ElementAt( row );
+                if (col >= piarr.Length)
+                    return null;
+                PropertyInfo pi = piarr[col];
+                return pi.GetValue( thp, BindingFlags.Default, null, null, null).ToString( );
             }
         }
 
