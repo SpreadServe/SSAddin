@@ -137,6 +137,14 @@ namespace SSAddin {
             return val;
         }
 
+        [ExcelFunction( Description = "Volatile: pull data from S2 tiingo cache.", IsVolatile = true )]
+        public static object s2vtcache(
+            [ExcelArgument( Name = "QueryKey", Description = "quandl query key in s2cfg!C" )] string qkey,
+            [ExcelArgument( Name = "XOffset", Description = "column offset to cache position. 0 default" )] int xoffset,
+            [ExcelArgument( Name = "YOffset", Description = "row offset to cache position. 0 default" )] int yoffset ) {
+            return s2tcache( qkey, xoffset, yoffset, null );
+        }
+
         [ExcelFunction( Description = "Pull data from S2 web socket cache." )]
         public static object s2wscache(
             [ExcelArgument( Name = "QueryKey", Description = "websock query key in s2cfg!C" )] string wkey,
