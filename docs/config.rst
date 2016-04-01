@@ -22,13 +22,14 @@ Any spreadsheet that uses SSAddin must have a sheet called ``s2cfg``. The SSAddi
 functions get their configuration from the s2cfg sheet and will fail if it doesn't exist
 or if its contents are not correctly laid out. The log files should alert you if there's a
 problem in your s2cfg sheet. They are also a good way of checking that the addin has composed
-your quandl queries as you expected. Bear in mind these points on how the addin scans the s2cfg
-sheet for configuration...
+your quandl or tiingo queries as you expected. Bear in mind these points on how the addin
+scans the s2cfg sheet for configuration. Also check the example sheets in the xls sub directory
+for concrete illustrations of the guidelines below.
 
 * SSAddin scans the s2cfg sheet from the first row downwards. It will stop scanning when it
   finds a row with an empty cell in column A. This means you can't have spaces between your
   config. It must all be in a single contiguous block from row 1 downwards.
-* The value in column A must be ``quandl``, ``cron`` or ``websock``.
+* The value in column A must be ``quandl``, ``tiingo``, ``cron`` or ``websock``.
 * Depending on the value in column A there are different expectations for the values in
   column B onwards.
   
@@ -40,6 +41,20 @@ sheet for configuration...
       to tacked on to the Quandl query URL after the ``?``  For instance column F could be
       ``rows`` and column G ``5`` so that ``?rows=5`` is appended to the URL query submitted
       to quandl.
+    * ``config``: column pairs from  C & D onwards are reserved for name value pairs that
+      apply to all queries. Currently only ``auth_token`` is supported. If you put ``auth_token``
+      in column C, then put your actual key in column D for it to be added to all queries.
+  
+  * ``tiingo``: column B should be ``query`` or ``config``
+  
+    * ``query``: column C should be the unique QueryKey that's passed to the ``s2tiingo``
+      function, column D should be ``ticker`` and column E should be a ticker symbol
+      eg ``msft`` or ``aapl``. The ticker symbol should be lower case. Column F should
+      be ``root``, followed by ``daily`` or ``funds`` in column G. Column H is optional.
+      If it's present it should be ``leaf`` and then column I should be ``prices``. If
+      it's absent a tiingo query that gets meta data for the symbol will be dispatched.
+      Finally, columns J, K, L & M can be used to specify startDate and endDate for
+      historical price queries. 
     * ``config``: column pairs from  C & D onwards are reserved for name value pairs that
       apply to all queries. Currently only ``auth_token`` is supported. If you put ``auth_token``
       in column C, then put your actual key in column D for it to be added to all queries.
