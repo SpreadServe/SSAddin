@@ -7,6 +7,9 @@ SSAddin builds on several other excellent OSS projects: Excel-DNA, NCrontab, Web
 ## Quandl
 quandl.com already distributes a perfectly good Excel addin, so how is SSAddin different? SSAddin uses no VBA and no GUI. It has no menu cluttering your Excel menu bar, no dialog or message boxes popping up. Everything is achieved via worksheet functions, and all network round trips are handled on a background thread so your Excel UI never blocks waiting for data to download from quandl.com.
 
+## Tiingo
+Tiingo is an exciting new financial data portal challenging high priced incumbents like Bloomberg and Thomson Reuters. Recently tiingo.com has added API access to historical data, which is now supported by SSAddin. 
+
 ## Cron
 SSAddin enables the creation of cron style timer jobs in Excel that trigger RTD updates on the schedule you specify. Cron timers can be used to trigger recalculations, or to launch scheduled downloads from quandl.com
 
