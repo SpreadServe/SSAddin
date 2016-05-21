@@ -37,6 +37,7 @@ namespace SSAddin {
         protected Queue<String[]>   m_InputQueue;
         protected HashSet<String>   m_InFlight;
         protected Dictionary<String, WSCallback> m_WSCallbacks;
+        protected TWSCallback       m_TWSCallback;
 
         protected Thread            m_WorkerThread;     // for executing the web query
         protected ManualResetEvent  m_Event;            // control worker thread sleep
@@ -83,7 +84,7 @@ namespace SSAddin {
             string fkey = String.Format( "{0}.{1}", type, key);
             lock (m_InFlight) {
                 if (m_InFlight.Contains( fkey )) {   // Queued or running...
-                    Logr.Log( String.Format( "AddRequest: {0} is inflight", fkey ) );
+                    Logr.Log( String.Format( "~A AddRequest: {0} is already inflight", fkey ) );
                     return false;                   // so bail
                 }
                 lock (m_InputQueue) {
@@ -109,6 +110,15 @@ namespace SSAddin {
                 // with the same key
                 m_InFlight.Remove( wskey );
                 m_WSCallbacks.Remove( wskey );
+            }
+        }
+
+        protected void TWSCallbackClosed( string wskey ) {
+            lock (m_InFlight) {
+                // releasing the existing tiingo websock callback handler enables the 
+                // BackgroundWork method to create another one
+                m_InFlight.Remove( wskey );
+                m_TWSCallback = null;
             }
         }
 
@@ -162,6 +172,13 @@ namespace SSAddin {
                         WSCallback wscb = new WSCallback( work[1], work[2], this.WSCallbackClosed );
                         lock (m_InFlight) {
                             m_WSCallbacks.Add( fkey, wscb );
+                        }
+                    }
+                    else if (work[0] == "twebsock") {
+                        lock (m_InFlight) {
+                            if (m_TWSCallback == null) {
+                                m_TWSCallback = new TWSCallback( work[1], work[2], this.TWSCallbackClosed );
+                            }
                         }
                     }
                     work = GetWork( );

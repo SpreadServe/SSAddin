@@ -123,8 +123,8 @@ namespace SSAddin {
         }
 
         public String GetQueryURL( String qtype, String qkey) {
-            // We're looking for a row that has 'quandl' in the first cell, query in the second,
-            // and then qkey in the third.
+            // We're looking for a row that has 'quandl' or 'tiingo' in the first cell,
+            // query in the second, and then qkey in the third.
             int row = FindRow( qtype, "query", qkey);
             if (row == -1) {
                 Logr.Log( String.Format( "GetQueryURL: couldn't find {0}.{1}", qtype, qkey ) );
@@ -218,6 +218,24 @@ namespace SSAddin {
             }
             string url = String.Format( "ws://{0}:{1}/{2}", host, port, path );
             return url;
+        }
+
+        public Tuple<String,String> GetTiingoWebSock( String wskey ) {
+            // We're looking for a row that has 'websock' in the first cell, tiingo in the second,
+            // and then wskey in the third.
+            int row = FindRow( "websock", "tiingo", wskey );
+            if (row == -1) {
+                Logr.Log( String.Format( "GetTiingoWebSock: couldn't find {0}", wskey ) );
+                return null;
+            }
+            // Now we've found the right row we expect to find the url and the ticker symbol
+            string url = GetCellAsString( row, 3 );
+            string auth_token = GetQueryConfig( "tiingo", "auth_token" );
+            if (url == null || auth_token == null) {
+                Logr.Log( String.Format( "GetTiingoWebSock: bad url or auth_token wskey({0})", wskey ) );
+                return null;
+            }
+            return Tuple.Create( url, auth_token);
         }
     }
 }

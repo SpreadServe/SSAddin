@@ -88,6 +88,18 @@ namespace SSAddin {
             return ExcelError.ExcelErrorValue;
         }
 
+        [ExcelFunction( Description = "Connect to tiingo web socket." )]
+        public static object s2twebsock( 
+            [ExcelArgument( Name = "SockKey", Description = "twebsock url key in s2cfg!C" )] string wskey ) {
+            Tuple<String,String> urlauth = s_ConfigSheet.GetTiingoWebSock( wskey);
+            if (urlauth == null) {
+                return ExcelMissing.Value;
+            }
+            if (s_WebClient.AddRequest( "twebsock", urlauth.Item1, urlauth.Item2 ))
+                return s_Submitted;
+            return ExcelError.ExcelErrorValue;
+        }
+
         [ExcelFunction( Description = "Pull data from S2 quandl cache.")]
 		public static object s2qcache( 
             [ExcelArgument(Name="QueryKey", Description="quandl query key in s2cfg!C")] string qkey,

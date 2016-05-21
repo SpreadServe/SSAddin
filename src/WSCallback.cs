@@ -28,13 +28,18 @@ namespace SSAddin {
             // ctor will be invoked on the SSWebClient worker thread
             m_ClosedCB = ccb;
             m_Key = wskey;
-            m_Client = new WebSocket( url );
-            m_Client.Opened += new EventHandler( Opened );
-            m_Client.Error += new EventHandler<SuperSocket.ClientEngine.ErrorEventArgs>( Error );
-            m_Client.Closed += new EventHandler( Closed );
-            m_Client.MessageReceived += new EventHandler<MessageReceivedEventArgs>( MessageReceived );
-            m_Client.DataReceived += new EventHandler<WebSocket4Net.DataReceivedEventArgs>( DataReceived );
-            m_Client.Open( );
+            try {
+                m_Client = new WebSocket( url );
+                m_Client.Opened += new EventHandler( Opened );
+                m_Client.Error += new EventHandler<SuperSocket.ClientEngine.ErrorEventArgs>( Error );
+                m_Client.Closed += new EventHandler( Closed );
+                m_Client.MessageReceived += new EventHandler<MessageReceivedEventArgs>( MessageReceived );
+                m_Client.DataReceived += new EventHandler<WebSocket4Net.DataReceivedEventArgs>( DataReceived );
+                m_Client.Open( );
+            }
+            catch (System.ArgumentException ae) {
+                Logr.Log( String.Format( "WSCallback.ctor: {0}", ae.Message ) );
+            }
         }
 
         #endregion Worker thread
