@@ -34,7 +34,7 @@ Parameters
   
 Return value: "OK" if the function succeeds, an Excel error otherwise.
 
-**s2qcache**: get a value from a quandle query result set. The position of the cell invoking this function is used
+**s2qcache**: get a value from a quandl query result set. The position of the cell invoking this function is used
 to figure out which cell to get from the result set.
 
 Parameters
@@ -55,6 +55,45 @@ Return value: a value from the result set, or #N/A.
 Parameters
 
 * ``QueryKey``: should match the QueryKey given to `s2quandl`.
+* ``XOffset``: defaults to 0. If the left hand side of the result grid on your sheet is not column A this should
+  be the number of columns across.
+* ``YOffset``: defaults to 0. If the top row of the result grid on your sheet is not row 1 this should
+  be the number of rows down.
+
+Return value: a value from the result set, or #N/A.
+
+**s2tiingo**: launch a tiingo query.
+
+Parameters
+
+* ``QueryKey``: a value or cell reference evaluating to a string that matches a value in column C of
+  the s2cfg sheet. The s2cfg row with the matching column C value will be used to specify a tiingo query.
+  See the tiingo1 or 2 example sheets.
+* ``Trigger``: an optional trigger. The value isn't used inside the function, but a change in the input can
+  be used to force repeat execution. 
+  
+Return value: "OK" if the function succeeds, an Excel error otherwise.
+
+**s2tcache**: get a value from a tiingo query result set. The position of the cell invoking this function is used
+to figure out which cell to get from the result set.
+
+Parameters
+
+* ``QueryKey``: should match the QueryKey given to `s2tiingo`.
+* ``XOffset``: defaults to 0. If the left hand side of the result grid on your sheet is not column A this should
+  be the number of columns across.
+* ``YOffset``: defaults to 0. If the top row of the result grid on your sheet is not row 1 this should
+  be the number of rows down.
+* ``Trigger``: an optional trigger. The value isn't used inside the function, but a change in the input can
+  be used to force repeat execution. 
+
+Return value: a value from the result set, or #N/A.
+
+**s2vtcache**: a volatile version of s2tcache.
+
+Parameters
+
+* ``QueryKey``: should match the QueryKey given to `s2tiingo`.
 * ``XOffset``: defaults to 0. If the left hand side of the result grid on your sheet is not column A this should
   be the number of columns across.
 * ``YOffset``: defaults to 0. If the top row of the result grid on your sheet is not row 1 this should
