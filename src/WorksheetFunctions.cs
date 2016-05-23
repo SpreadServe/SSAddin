@@ -95,7 +95,7 @@ namespace SSAddin {
             if (urlauth == null) {
                 return ExcelMissing.Value;
             }
-            if (s_WebClient.AddRequest( "twebsock", urlauth.Item1, urlauth.Item2 ))
+            if (s_WebClient.AddRequest( "twebsock", wskey, urlauth.Item1, urlauth.Item2 ))
                 return s_Submitted;
             return ExcelError.ExcelErrorValue;
         }

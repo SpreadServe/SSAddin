@@ -221,9 +221,9 @@ namespace SSAddin {
         }
 
         public Tuple<String,String> GetTiingoWebSock( String wskey ) {
-            // We're looking for a row that has 'websock' in the first cell, tiingo in the second,
+            // We're looking for a row that has 'twebsock' in the first cell, tiingo in the second,
             // and then wskey in the third.
-            int row = FindRow( "websock", "tiingo", wskey );
+            int row = FindRow( "twebsock", "tiingo", wskey );
             if (row == -1) {
                 Logr.Log( String.Format( "GetTiingoWebSock: couldn't find {0}", wskey ) );
                 return null;

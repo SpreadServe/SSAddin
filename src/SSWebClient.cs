@@ -177,7 +177,7 @@ namespace SSAddin {
                     else if (work[0] == "twebsock") {
                         lock (m_InFlight) {
                             if (m_TWSCallback == null) {
-                                m_TWSCallback = new TWSCallback( work[1], work[2], this.TWSCallbackClosed );
+                                m_TWSCallback = new TWSCallback( work[1], work[2], work[3], this.TWSCallbackClosed );
                             }
                         }
                     }

@@ -1,4 +1,5 @@
 ﻿using System;
+using System.IO;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -13,25 +14,24 @@ namespace SSAddin {
         protected WebSocket m_Client;
         protected ClosedCB m_ClosedCB;
         protected String m_AuthToken;
-        protected String m_Key = "twebsock";
-        protected String m_URL;
+        protected String m_Key;
         protected String m_SubscribeMessage;
         protected Dictionary<String, SortedSet<String>> m_Subscriptions = new Dictionary<string,SortedSet<string>>( );
 
         protected static DataCache s_Cache = DataCache.Instance( );
         // Braces are special chars in C# format strings, so we need a double brace to indicate a literal single brace,
         // rather than a the start of a place holder eg {0}
-        protected static String s_SubscribeMessageFormat = "{{'eventName':'subscribe','eventData':{{'authToken': '{0}'}}}}";
+        protected static String s_SubscribeMessageFormat = "{{\"eventName\":\"subscribe\",\"eventData\":{{\"authToken\": \"{0}\"}}}}";
 
         #region Worker thread
 
-        public TWSCallback( String url, String auth, ClosedCB ccb ) {
+        public TWSCallback( String key, String url, String auth, ClosedCB ccb ) {
             m_AuthToken = auth;
             m_ClosedCB = ccb;
-            m_URL = url;
+            m_Key = key;
             try {
                 m_SubscribeMessage = String.Format( s_SubscribeMessageFormat, m_AuthToken );
-                m_Client = new WebSocket( url );
+                m_Client = new WebSocket( url);
                 m_Client.Opened += new EventHandler( Opened );
                 m_Client.Error += new EventHandler<SuperSocket.ClientEngine.ErrorEventArgs>( Error );
                 m_Client.Closed += new EventHandler( Closed );
@@ -63,13 +63,13 @@ namespace SSAddin {
         // All the pool thread methods are callbacks that will be fire on
         // web socket events on pool threads.
 
-        protected void UpdateRTD( string ticker, string subelem, string value ) {
+        protected void UpdateRTD( string key, string subelem, string value ) {
             // The RTD server doesn't necessarily exist. If no cell calls 
             // s2sub( ) it won't be instanced by Excel.
             RTDServer rtd = RTDServer.GetInstance( );
             if (rtd == null)
                 return;
-            string stopic = String.Format( "twebsock.{0}.{1}", ticker, subelem );
+            string stopic = String.Format( "twebsock.{0}.{1}", key, subelem );
             rtd.CacheUpdate( stopic, value );
         }
 
@@ -77,9 +77,25 @@ namespace SSAddin {
             Logr.Log( String.Format( "TWSCallback.DataReceived: {0}", e.Data ) );
         }
 
+        protected void HandleToken( JsonToken t, object v ) {
+            // add code to stack token
+        }
+
+        protected void HandleValue( object v ) {
+            // compare current stack to 
+        }
+
         void MessageReceived( object sender, MessageReceivedEventArgs e ) {
             Logr.Log( String.Format( "TWSCallback.MessageReceived: {0}", e.Message ) );
-
+            JsonTextReader jtr = new JsonTextReader( new StringReader( e.Message ) );
+            while (jtr.Read( )) {
+                if (jtr.TokenType != JsonToken.String) {
+                    HandleToken( jtr.TokenType, jtr.Value );
+                }
+                else {
+                    HandleValue( jtr.Value );
+                }
+            }
             RTDServer rtd = RTDServer.GetInstance( );
             if (rtd != null) {
                 // rtd.CacheUpdateBatch( String.Format( "twebsock.{0}", m_Key), updates);
@@ -90,7 +106,7 @@ namespace SSAddin {
         void Closed( object sender, EventArgs e ) {
             Logr.Log( String.Format( "TWSCallback.Closed: wskey({0})", m_Key ) );
             if (m_ClosedCB != null)
-                m_ClosedCB( String.Format( "{0}.{1}", m_Key, m_URL ));
+                m_ClosedCB( String.Format( "twebsock.{1}", m_Key));
             UpdateRTD( m_Key, "status", "closed" );
         }
 
