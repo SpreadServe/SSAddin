@@ -40,7 +40,9 @@ namespace SSAddin {
             if ( url == null || url == "") {
                 return ExcelMissing.Value;
             }
-            if (s_WebClient.AddRequest( "quandl", qkey, url ))
+            var req = new Dictionary<string,string>(){ {"type","quandl"}, {"key",qkey},{"url",url}};
+            s_ConfigSheet.GetProxyConfig("quandl", req);
+            if (s_WebClient.AddRequest( req))
                 return s_Submitted;
             return ExcelError.ExcelErrorGettingData;
 		}
@@ -58,7 +60,9 @@ namespace SSAddin {
             if (auth_token == null || auth_token == "") {
                 return ExcelMissing.Value;
             }
-            if (s_WebClient.AddRequest( "tiingo", qkey, url, auth_token ))
+            var req = new Dictionary<string,string>(){ {"type","tiingo"}, {"key",qkey},{"url",url},{"auth_token",auth_token}};
+            s_ConfigSheet.GetProxyConfig("tiingo", req);
+            if (s_WebClient.AddRequest( req))
                 return s_Submitted;
             return ExcelError.ExcelErrorGettingData;
         }
@@ -83,7 +87,7 @@ namespace SSAddin {
             if (url == null) {
                 return ExcelMissing.Value;
             }
-            if (s_WebClient.AddRequest( "websock", wskey, url))
+            if (s_WebClient.AddRequest( new Dictionary<string,string>(){ {"type","websock"}, {"key",wskey},{"url",url}}))
                 return s_Submitted;
             return ExcelError.ExcelErrorValue;
         }
@@ -91,11 +95,11 @@ namespace SSAddin {
         [ExcelFunction( Description = "Connect to tiingo web socket." )]
         public static object s2twebsock( 
             [ExcelArgument( Name = "SockKey", Description = "twebsock url key in s2cfg!C" )] string wskey ) {
-            Tuple<String,String> urlauth = s_ConfigSheet.GetTiingoWebSock( wskey);
-            if (urlauth == null) {
+            Dictionary<string,string> req = s_ConfigSheet.GetTiingoWebSock( wskey);
+            if ( req == null) {
                 return ExcelMissing.Value;
             }
-            if (s_WebClient.AddRequest( "twebsock", wskey, urlauth.Item1, urlauth.Item2 ))
+            if (s_WebClient.AddRequest( req))
                 return s_Submitted;
             return ExcelError.ExcelErrorValue;
         }

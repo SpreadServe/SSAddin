@@ -19,12 +19,12 @@ namespace SSAddin {
         public float    close { get; set; }
         public float    high { get; set; }
         public float    low { get; set; }
-        public int      volume { get; set; }
+        public float    volume { get; set; }
         public float    adjOpen { get; set; }
         public float    adjClose { get; set; }
         public float    adjHigh { get; set; }
         public float    adjLow { get; set; }
-        public int      adjVolume { get; set; }
+        public float    adjVolume { get; set; }
     }
     #endregion
 
@@ -34,10 +34,10 @@ namespace SSAddin {
         protected static SSWebClient    s_Instance;
         protected static object         s_InstanceLock = new object( );
 
-        protected Queue<String[]>   m_InputQueue;
-        protected HashSet<String>   m_InFlight;
-        protected Dictionary<String, WSCallback> m_WSCallbacks;
-        protected TWSCallback       m_TWSCallback;
+        protected Queue<Dictionary<string,string>>  m_InputQueue;
+        protected HashSet<String>                   m_InFlight;
+        protected Dictionary<String, WSCallback>    m_WSCallbacks;
+        protected TWSCallback                       m_TWSCallback;
 
         protected Thread            m_WorkerThread;     // for executing the web query
         protected ManualResetEvent  m_Event;            // control worker thread sleep
@@ -50,7 +50,7 @@ namespace SSAddin {
         protected SSWebClient( )
         {
             m_TempDir = System.IO.Path.GetTempPath( );
-            m_InputQueue = new Queue<String[]>( );
+            m_InputQueue = new Queue<Dictionary<string,string>>( );
             m_InFlight = new HashSet<String>( );
             m_WSCallbacks = new Dictionary<string, WSCallback>( );
             m_Event = new ManualResetEvent( false);
@@ -79,9 +79,14 @@ namespace SSAddin {
         }
 
 
-        public bool AddRequest( string type, string key, String url, String auth_token="") {
+        public bool AddRequest( Dictionary<string, string> req) {
+            // Every request *must* have type, key, url. There may be other optionals like
+            // auth_token, https_proxy_host...
+            string type = req["type"];
+            string key = req["key"];
+            string url = req["url"];
+            string fkey = String.Format( "{0}.{1}", req["type"], req["key"]);
             // Is this job pending or in progress?
-            string fkey = String.Format( "{0}.{1}", type, key);
             lock (m_InFlight) {
                 if (m_InFlight.Contains( fkey )) {   // Queued or running...
                     Logr.Log( String.Format( "~A AddRequest: {0} is already inflight", fkey ) );
@@ -90,8 +95,7 @@ namespace SSAddin {
                 lock (m_InputQueue) {
                     // Running on the main Excel thread here. Q the work, and
                     // signal the background thread to wake up...
-                    Logr.Log( String.Format( "~A AddRequest adding {0} {1} {2} {3}", type, key, url, auth_token ) );
-                    String[] req = { type, key, url, auth_token};
+                    Logr.Log( String.Format( "~A AddRequest adding {0} {1} {2}", type, key, url ) );
                     m_InputQueue.Enqueue( req);
                 }
                 m_InFlight.Add( fkey);
@@ -126,7 +130,7 @@ namespace SSAddin {
 
         #region Worker thread methods
 
-        protected String[] GetWork( ) {
+        protected Dictionary<string,string> GetWork( ) {
             // Put this oneliner in its own method to wrap the locking. We can't
             // hold the lock while we're looping in BackgroundWork( ) as that
             // will prevent the Excel thread adding new requests.
@@ -147,37 +151,38 @@ namespace SSAddin {
             while (true) {
                 // Wait for a signal from the other thread to say there's some work.
                 m_Event.WaitOne( );
-                String[] work = GetWork( );
+                Dictionary<string,string> work = GetWork( );
                 while ( work != null) {
-                    if (work[0] == "stop") {
+                    if (work["type"] == "stop") {
                         // exit req from excel thread
                         Logr.Log( String.Format( "~A BackgroundWork thread exiting" ) );
                         return;
                     }
-                    string fkey = String.Format( "{0}.{1}", work[0], work[1]);
+                    string fkey = String.Format( "{0}.{1}", work["type"], work["key"]);
                     Logr.Log( String.Format( "~A BackgroundWork new request fkey({0})", fkey) );
-                    if (work[0] == "quandl") {
-                        bool ok = DoQuandlQuery( work[1], work[2]);
+
+                    if (work["type"] == "quandl") {
+                        bool ok = DoQuandlQuery( work);
                         lock (m_InFlight) {
                             m_InFlight.Remove( fkey );
                         }
                     }
-                    else if (work[0] == "tiingo") {
-                        bool ok = DoTiingoQuery( work[1], work[2], work[3] );
+                    else if (work["type"] == "tiingo") {
+                        bool ok = DoTiingoQuery( work );
                         lock (m_InFlight) {
                             m_InFlight.Remove( fkey );
                         }
                     }
-                    else if (work[0] == "websock") {
-                        WSCallback wscb = new WSCallback( work[1], work[2], this.WSCallbackClosed );
+                    else if (work["type"] == "websock") {
+                        WSCallback wscb = new WSCallback( work, this.WSCallbackClosed );
                         lock (m_InFlight) {
                             m_WSCallbacks.Add( fkey, wscb );
                         }
                     }
-                    else if (work[0] == "twebsock") {
+                    else if (work["type"] == "twebsock") {
                         lock (m_InFlight) {
                             if (m_TWSCallback == null) {
-                                m_TWSCallback = new TWSCallback( work[1], work[2], work[3], this.TWSCallbackClosed );
+                                m_TWSCallback = new TWSCallback( work, this.TWSCallbackClosed );
                             }
                         }
                     }
@@ -200,14 +205,41 @@ namespace SSAddin {
             rtd.CacheUpdate( stopic, value );
         }
 
+        protected void ConfigureProxy(Dictionary<string, string> work, WebClient wc)
+        {
+            // If the dictionary has proxy config, then set it up...
+            if (!work.ContainsKey("http_proxy_host"))
+                return;
 
-        protected bool DoQuandlQuery( string qkey, string url )
+            int port = 80;
+            string host = work["http_proxy_host"];
+            if (work.ContainsKey("http_proxy_port"))
+            {
+                if (!Int32.TryParse(work["http_proxy_port"], out port))
+                    port = 80;
+            }
+
+            WebProxy proxy = new WebProxy( String.Format("{0}:{1}", host, port), true);
+            string user = "", pass = "";
+            if (work.ContainsKey("http_proxy_user") && work.ContainsKey("http_proxy_password")) {
+                user = work["http_proxy_user"];
+                pass = work["http_proxy_password"];
+                proxy.Credentials = new NetworkCredential( user, pass);
+            }
+            wc.Proxy = proxy;
+            Logr.Log(String.Format("ConfigureProxy host({0}) port({1}) user({2}) pass({3})", host, port, user, pass));
+        }
+
+        protected bool DoQuandlQuery( Dictionary<string,string> work)
 		{
+            string qkey = work["key"];
+            string url = work["url"];
+            string line = "";
+            string lineCount = "0";
 			try	{
-                string line = "";
-                string lineCount = "0";
                 // Set up the web client to HTTP GET
                 var client = new WebClient( );
+                ConfigureProxy(work, client);
                 Stream data = client.OpenRead( url);
                 var reader = new StreamReader( data);
                 // Local file to dump result
@@ -243,12 +275,16 @@ namespace SSAddin {
             return false;
 		}
 
-        protected bool DoTiingoQuery( string qkey, string url, string auth_token ) {
+        protected bool DoTiingoQuery( Dictionary<string,string> work) {
+            string qkey = work["key"];
+            string url = work["url"];
+            string auth_token = work["auth_token"];
+            string line = "";
+            string lineCount = "0";
             try {
-                string line = "";
-                string lineCount = "0";
                 // Set up the web client to HTTP GET
                 var client = new WebClient( );
+                ConfigureProxy(work, client);
                 client.Headers.Set( "Content-Type", "application/json" );
                 client.Headers.Set( "Authorization", auth_token );
                 Stream data = client.OpenRead( url );

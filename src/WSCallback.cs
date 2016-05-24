@@ -24,10 +24,11 @@ namespace SSAddin {
 
         #region Worker thread
 
-        public WSCallback( String wskey, String url, ClosedCB ccb ) {
+        public WSCallback( Dictionary<string,string> work, ClosedCB ccb ) {
             // ctor will be invoked on the SSWebClient worker thread
             m_ClosedCB = ccb;
-            m_Key = wskey;
+            m_Key = work["key"];
+            string url = work["url"];
             try {
                 m_Client = new WebSocket( url );
                 m_Client.Opened += new EventHandler( Opened );

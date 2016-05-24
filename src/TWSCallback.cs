@@ -2,9 +2,11 @@
 using System.IO;
 using System.Collections.Generic;
 using System.Linq;
+using System.Net;
 using System.Text;
 using WebSocket4Net;
 using Newtonsoft.Json;
+using SuperSocket.ClientEngine;
 
 namespace SSAddin {
 
@@ -15,6 +17,11 @@ namespace SSAddin {
         protected ClosedCB m_ClosedCB;
         protected String m_AuthToken;
         protected String m_Key;
+        protected String m_URL;
+        protected String m_ProxyHost;
+        protected String m_ProxyPort;
+        protected String m_ProxyUser;
+        protected String m_ProxyPassword;
         protected String m_SubscribeMessage;
         protected Dictionary<String, SortedSet<String>> m_Subscriptions = new Dictionary<string,SortedSet<string>>( );
 
@@ -25,18 +32,47 @@ namespace SSAddin {
 
         #region Worker thread
 
-        public TWSCallback( String key, String url, String auth, ClosedCB ccb ) {
-            m_AuthToken = auth;
+        public TWSCallback( Dictionary<string,string> work, ClosedCB ccb ) {
+            // string host = 
+            // string port = 
+            // IPHostEntry he = Dns.GetHostEntry( host);
+            // var proxy = new HttpConnectProxy( new IPEndPoint( IPAddressList[0], port));
+            // m_Client.Proxy = ( SuperSocket.ClientEngine.IProxyConnector)proxy;
+            m_Key = work["key"];
+            m_URL = work["url"];
+            work.TryGetValue( "auth_token", out m_AuthToken);
             m_ClosedCB = ccb;
-            m_Key = key;
             try {
                 m_SubscribeMessage = String.Format( s_SubscribeMessageFormat, m_AuthToken );
-                m_Client = new WebSocket( url);
+                m_Client = new WebSocket( m_URL);
                 m_Client.Opened += new EventHandler( Opened );
                 m_Client.Error += new EventHandler<SuperSocket.ClientEngine.ErrorEventArgs>( Error );
                 m_Client.Closed += new EventHandler( Closed );
                 m_Client.MessageReceived += new EventHandler<MessageReceivedEventArgs>( MessageReceived );
                 m_Client.DataReceived += new EventHandler<WebSocket4Net.DataReceivedEventArgs>( DataReceived );
+                // Do we need to set up a proxy?
+                if (work.TryGetValue("http_proxy_host", out m_ProxyHost)) {
+                    IPHostEntry he = Dns.GetHostEntry(m_ProxyHost);
+                    int port = 80;
+                    if (work.TryGetValue("http_proxy_host", out m_ProxyPort)) {
+                        if (!Int32.TryParse(m_ProxyPort, out port))
+                            port = 80;
+                    }
+                    var proxy = new HttpConnectProxy( new IPEndPoint( he.AddressList[0], port));
+                    // Do we need to supply authentication to the proxy?
+                    if (work.TryGetValue("http_proxy_user", out m_ProxyUser))
+                    {
+                        work.TryGetValue("http_proxy_password", out m_ProxyPassword);
+                        // encode user:password as base64 and supply as 'Proxy-Authorization: Basic dXNlbWU6dGVzdA=='
+                        string upass = String.Format("{0}:{1}", m_ProxyUser, m_ProxyPassword);
+                        var plainTextBytes = System.Text.Encoding.UTF8.GetBytes(upass);
+                        string b64 = System.Convert.ToBase64String(plainTextBytes);
+                        proxy.Authorization = String.Format("Basic {0}", b64);
+                    }
+                    m_Client.Proxy = proxy;
+                }
+                Logr.Log(String.Format("TWSCallback.ctor: key({0}) url({1}) auth_token({2}) http_proxy_host({3}) http_proxy_port({4}) http_proxy_user({5}) http_proxy_password({6})",
+                                            m_Key, m_URL, m_AuthToken, m_ProxyHost, m_ProxyPort, m_ProxyUser, m_ProxyPassword));
                 m_Client.Open( );
             }
             catch (System.ArgumentException ae) {
