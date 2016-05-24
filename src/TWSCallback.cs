@@ -30,6 +30,11 @@ namespace SSAddin {
         // rather than a the start of a place holder eg {0}
         protected static String s_SubscribeMessageFormat = "{{\"eventName\":\"subscribe\",\"eventData\":{{\"authToken\": \"{0}\"}}}}";
 
+        protected static JsonSerializerSettings s_JsonSettings = new JsonSerializerSettings( )
+        {
+            Converters = { new JsonToDictionary( ) }
+        };
+
         #region Worker thread
 
         public TWSCallback( Dictionary<string,string> work, ClosedCB ccb ) {
@@ -123,15 +128,7 @@ namespace SSAddin {
 
         void MessageReceived( object sender, MessageReceivedEventArgs e ) {
             Logr.Log( String.Format( "TWSCallback.MessageReceived: {0}", e.Message ) );
-            JsonTextReader jtr = new JsonTextReader( new StringReader( e.Message ) );
-            while (jtr.Read( )) {
-                if (jtr.TokenType != JsonToken.String) {
-                    HandleToken( jtr.TokenType, jtr.Value );
-                }
-                else {
-                    HandleValue( jtr.Value );
-                }
-            }
+            var result = JsonConvert.DeserializeObject<IDictionary<string, object>>( e.Message, s_JsonSettings );
             RTDServer rtd = RTDServer.GetInstance( );
             if (rtd != null) {
                 // rtd.CacheUpdateBatch( String.Format( "twebsock.{0}", m_Key), updates);
