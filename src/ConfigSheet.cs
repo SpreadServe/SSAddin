@@ -18,6 +18,7 @@ namespace SSAddin {
         protected static String s_TiingoBaseURL = "https://api.tiingo.com/tiingo";
         protected static Dictionary<string, Func<object, string>> s_QuandlQueryFieldConverters = new Dictionary<string, Func<object, string>>( );
         protected static Dictionary<string, Func<object, string>> s_TiingoQueryFieldConverters = new Dictionary<string, Func<object, string>>( );
+        protected static string[] s_ProxyKeys = { "http_proxy_host", "http_proxy_port", "http_proxy_user", "http_proxy_password" };
 
         public ConfigSheet( ) {
             s_QuandlQueryFieldConverters["trim_start"] = ExcelDateNumberToString;
@@ -220,7 +221,7 @@ namespace SSAddin {
             return url;
         }
 
-        public Tuple<String,String> GetTiingoWebSock( String wskey ) {
+        public Dictionary<String,String> GetTiingoWebSock( String wskey ) {
             // We're looking for a row that has 'twebsock' in the first cell, tiingo in the second,
             // and then wskey in the third.
             int row = FindRow( "twebsock", "tiingo", wskey );
@@ -228,14 +229,30 @@ namespace SSAddin {
                 Logr.Log( String.Format( "GetTiingoWebSock: couldn't find {0}", wskey ) );
                 return null;
             }
-            // Now we've found the right row we expect to find the url and the ticker symbol
+            // Now we've found the right row we expect to find the url in col D
+            // and the auth_token on a config row. The auth_token is mandatory
+            // for a tiingo websock. 
             string url = GetCellAsString( row, 3 );
             string auth_token = GetQueryConfig( "tiingo", "auth_token" );
             if (url == null || auth_token == null) {
                 Logr.Log( String.Format( "GetTiingoWebSock: bad url or auth_token wskey({0})", wskey ) );
                 return null;
             }
-            return Tuple.Create( url, auth_token);
+            var req = new Dictionary<string,string>( ){{"type","twebsock"},{"key",wskey},{"url",url},{"auth_token",auth_token}};
+            // Now let's deal with optional elements of a tiingo request: proxy config may be supplied if we have to
+            // connect via a proxy.
+            GetProxyConfig("tiingo", req);
+            return req;
+        }
+
+        public void GetProxyConfig(string ctype, Dictionary<string, string> req)
+        {
+            foreach (string key in s_ProxyKeys)
+            {
+                string val = GetQueryConfig(ctype, key);
+                if (val != "")
+                    req.Add(key, val);
+            }
         }
     }
 }

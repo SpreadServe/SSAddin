@@ -35,40 +35,38 @@
     <StartupObject />
   </PropertyGroup>
   <ItemGroup>
-    <Reference Include="ExcelDna.Integration, Version=0.33.5720.29145, Culture=neutral, processorArchitecture=MSIL">
-      <SpecificVersion>False</SpecificVersion>
-      <HintPath>Packages\Excel-DNA.0.32.0\lib\ExcelDna.Integration.dll</HintPath>
+    <Reference Include="ExcelDna.Integration">
+      <HintPath>..\..\..\bin\ssaddin\ExcelDna.Integration.dll</HintPath>
     </Reference>
     <Reference Include="NCrontab">
-      <HintPath>..\..\..\bld\ncrontab10\src\NCrontab\obj\Debug\NCrontab.dll</HintPath>
+      <HintPath>..\..\..\bin\ssaddin\NCrontab.dll</HintPath>
     </Reference>
     <Reference Include="Newtonsoft.Json">
-      <HintPath>..\..\..\bld\Json608\Src\Newtonsoft.Json\bin\Debug\Net40\Newtonsoft.Json.dll</HintPath>
+      <HintPath>..\..\..\bin\ssaddin\Newtonsoft.Json.dll</HintPath>
     </Reference>
-    <Reference Include="SuperSocket.ClientEngine.Common, Version=0.3.0.0, Culture=neutral, PublicKeyToken=ee9af13f57f00acc, processorArchitecture=MSIL">
-      <SpecificVersion>False</SpecificVersion>
-      <HintPath>..\..\..\bld\SuperSocket.ClientEngine\Common\bin\Debug\SuperSocket.ClientEngine.Common.dll</HintPath>
+    <Reference Include="SuperSocket.ClientEngine.Common">
+      <HintPath>..\..\..\bin\ssaddin\SuperSocket.ClientEngine.Common.dll</HintPath>
     </Reference>
-    <Reference Include="SuperSocket.ClientEngine.Core, Version=0.3.0.0, Culture=neutral, PublicKeyToken=ee9af13f57f00acc, processorArchitecture=MSIL">
-      <SpecificVersion>False</SpecificVersion>
-      <HintPath>..\..\..\bld\SuperSocket.ClientEngine\Core\bin\Debug\SuperSocket.ClientEngine.Core.dll</HintPath>
+    <Reference Include="SuperSocket.ClientEngine.Core">
+      <HintPath>..\..\..\bin\ssaddin\SuperSocket.ClientEngine.Core.dll</HintPath>
     </Reference>
-    <Reference Include="SuperSocket.ClientEngine.Protocol, Version=0.3.0.0, Culture=neutral, PublicKeyToken=ee9af13f57f00acc, processorArchitecture=MSIL">
-      <SpecificVersion>False</SpecificVersion>
-      <HintPath>..\..\..\bld\SuperSocket.ClientEngine\Protocol\bin\Debug\SuperSocket.ClientEngine.Protocol.dll</HintPath>
+    <Reference Include="SuperSocket.ClientEngine.Protocol">
+      <HintPath>..\..\..\bin\ssaddin\SuperSocket.ClientEngine.Protocol.dll</HintPath>
     </Reference>
     <Reference Include="System" />
     <Reference Include="System.Core" />
     <Reference Include="System.Windows.Forms" />
     <Reference Include="WebSocket4Net">
-      <HintPath>..\..\..\bld\WebSocket4Net\WebSocket4Net\bin\Debug\WebSocket4Net.dll</HintPath>
+      <HintPath>..\..\..\bin\ssaddin\WebSocket4Net.dll</HintPath>
     </Reference>
   </ItemGroup>
   <ItemGroup>
     <Compile Include="AddIn.cs" />
     <Compile Include="CronManager.cs" />
     <Compile Include="DataCache.cs" />
+    <Compile Include="HttpConnectProxy.cs" />
     <Compile Include="Logr.cs" />
+    <Compile Include="ProxyConnectorBase.cs" />
     <Compile Include="RTDServer.cs" />
     <Compile Include="ConfigSheet.cs" />
     <Compile Include="SSWebClient.cs" />
