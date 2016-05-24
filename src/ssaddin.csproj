@@ -72,6 +72,7 @@
     <Compile Include="RTDServer.cs" />
     <Compile Include="ConfigSheet.cs" />
     <Compile Include="SSWebClient.cs" />
+    <Compile Include="TWSCallback.cs" />
     <Compile Include="WorksheetFunctions.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="WSCallback.cs" />
