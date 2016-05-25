@@ -10,27 +10,34 @@ using SuperSocket.ClientEngine;
 
 namespace SSAddin {
 
+    // Apart from the ctor every method in TWSCallback that reads/writes object state locks
+    // because we may have the worker background thread in touching object state as well as
+    // a pool thread firing by a socket callback.
     class TWSCallback {
         public delegate void ClosedCB( string wskey );
 
         protected WebSocket m_Client;
-        protected ClosedCB m_ClosedCB;
-        protected String m_AuthToken;
-        protected String m_Key;
-        protected String m_URL;
-        protected String m_ProxyHost;
-        protected String m_ProxyPort;
-        protected String m_ProxyUser;
-        protected String m_ProxyPassword;
-        protected String m_SubscribeMessage;
+        protected ClosedCB  m_ClosedCB;
+        protected String    m_AuthToken;
+        protected String    m_Key;
+        protected String    m_URL;
+        protected String    m_ProxyHost;
+        protected String    m_ProxyPort;
+        protected String    m_ProxyUser;
+        protected String    m_ProxyPassword;
+        protected String    m_SubID;
         protected Dictionary<String, SortedSet<String>> m_Subscriptions = new Dictionary<string,SortedSet<string>>( );
         protected TiingoRealTimeMessageHandler m_RTMHandler;
+        protected SortedSet<string> m_PendingSubs = new SortedSet<string>( );
 
         protected static DataCache s_Cache = DataCache.Instance( );
         // Braces are special chars in C# format strings, so we need a double brace to indicate a literal single brace,
         // rather than a the start of a place holder eg {0}
+        // This is the old s_SubscribeMessageFormat from before Rishi introduced subscriptionIDs
         // protected static String s_SubscribeMessageFormat = "{{\"eventName\":\"subscribe\",\"eventData\":{{\"authToken\": \"{0}\"}}}}";
         protected static String s_SubscribeMessageFormat = "{{ \"eventName\":\"subscribe\",\"authorization\":\"{0}\",\"eventData\":{{ {1} }} }}";
+        // Format for composing {1} in s_SubscribeMessageFormat.
+        protected static String s_EventDataFormat = "\"subscriptionId\":{0},\"thresholdLevel\":0,\"tickers\":[{1}]";
 
         protected static JsonSerializerSettings s_JsonSettings = new JsonSerializerSettings( )
         {
@@ -40,19 +47,16 @@ namespace SSAddin {
         #region Worker thread
 
         public TWSCallback( Dictionary<string,string> work, ClosedCB ccb ) {
-            // string host = 
-            // string port = 
-            // IPHostEntry he = Dns.GetHostEntry( host);
-            // var proxy = new HttpConnectProxy( new IPEndPoint( IPAddressList[0], port));
-            // m_Client.Proxy = ( SuperSocket.ClientEngine.IProxyConnector)proxy;
+            // No need to bother locking in the ctor. We are on the background
+            // worker thread here, but we won't get methods fired on the pool
+            // threads until this method exits.
             m_Key = work["key"];
             m_URL = work["url"];
             work.TryGetValue( "auth_token", out m_AuthToken);
             m_ClosedCB = ccb;
             try {
-                m_SubscribeMessage = String.Format( s_SubscribeMessageFormat, m_AuthToken, "");
                 m_Client = new WebSocket( m_URL);
-                m_RTMHandler = new TiingoRealTimeMessageHandler(m_Client, UpdateRTD, m_Key);
+                m_RTMHandler = new TiingoRealTimeMessageHandler(m_Client, UpdateRTD, m_Key, SetSubID);
                 m_Client.Opened += new EventHandler( Opened );
                 m_Client.Error += new EventHandler<SuperSocket.ClientEngine.ErrorEventArgs>( Error );
                 m_Client.Closed += new EventHandler( Closed );
@@ -93,21 +97,69 @@ namespace SSAddin {
 
         public void AddSubscriptions( List<Dictionary<string,string>> subs)
         {
-            // TODO: deal with work dictionary from BAckgroundWork properly
-            // string ticker = sub["ticker"];
-            // SortedSet<String> ss = null;
-            // if (!m_Subscriptions.ContainsKey( ticker )) {
-            //     m_Subscriptions[ticker] = new SortedSet<string>( );
-            // }
-            // ss = m_Subscriptions[ticker];
-            // ss.Add( subelem );
+            // AddSubscriptions will be called from the background worker thread, but all the
+            // object state it touches here could also be touched by the pool thread methods
+            // below, so we lock on the socket object.
+            lock (m_Client) {
+                // First, put each subscription into the {ticker:[sub1,sub2] map
+                // that tracks all existing ticker_sub subscriptions.
+                // TODO: add the iex part to the sub sent from the 
+                foreach (var sub in subs) {
+                    if ( sub.ContainsKey("cachekey")) {
+                        string ckey = sub["cachekey"];
+                        // if ckey == m_Key then we've got a generic topic like
+                        // twebsock.iex.hbcount, and we ignore it.
+                        if (ckey != m_Key && sub.ContainsKey( "ticker_field" )) {
+                            string tfld = sub["ticker_field"];
+                            string[] tflds = tfld.Split( '_' );
+                            if (tflds.Length > 1) {
+                                string ticker = tflds[0];
+                                string subelem = tflds[1];
+                                SortedSet<String> ss = null;
+                                if (!m_Subscriptions.ContainsKey( ticker )) {
+                                    m_Subscriptions[ticker] = new SortedSet<string>( );
+                                    m_PendingSubs.Add( ticker );
+                                }
+                                ss = m_Subscriptions[ticker];
+                                ss.Add( subelem );
+                            }
+                        }
+                    }
+                }
+            }
+            // A worksheet invocation of s2sub could cause the background thread to dispatch here at
+            // any time. Maybe because the user has edited a sheet to add a new s2sub( ). Any new
+            // subs that have accumulated as a result should be dispatched as eearly as possible.
+            DispatchSubscriptions( );
         }
 
         #endregion Worker thread
 
+        #region Worker or pool thread
+        void DispatchSubscriptions( ) {
+            // We could be called by either thread, so lock as we'll potentially change object state
+            // and send stuff down the socker while another thread wants to do the same.
+            lock (m_Client) {
+                if (m_Client.State == WebSocketState.Open && m_SubID != null && m_PendingSubs.Count > 0) {
+                    // The socket is open, so the Opened( ) callback below must have already fired.
+                    // An open socket isn't enough. We also need a subID, which we only have after
+                    // we've processed the response to the initial subscription.
+                    StringBuilder sb = new StringBuilder( );
+                    foreach (string sub in m_PendingSubs) {
+                        sb.Append( String.Format( "\"{0}\"", sub ) );
+                    }
+                    string ed = String.Format( s_EventDataFormat, m_SubID, sb.ToString( ) );
+                    string submsg = String.Format( s_SubscribeMessageFormat, m_AuthToken, ed );
+                    Logr.Log( String.Format( "TWSCallback.DispatchSubscriptions: subscribe message({0})", submsg ) );
+                    m_Client.Send( submsg );
+                }
+            }
+        }
+        #endregion Worker or pool thread
+
         #region Pool thread
 
-        // All the pool thread methods are callbacks that will be fire on
+        // All the pool thread methods are callbacks that will be fired on
         // web socket events on pool threads.
 
         protected void UpdateRTD( string key, string subelem, string value ) {
@@ -139,6 +191,11 @@ namespace SSAddin {
             Logr.Log( String.Format( "TWSCallback.Closed: wskey({0})", m_Key ) );
             if (m_ClosedCB != null)
                 m_ClosedCB( String.Format( "twebsock.{0}", m_Key));
+            lock (m_Client) {
+                // Socket has closed, and will need to be reopened. The reopen will trigger
+                // another initial subscription, and then a new sub ID.
+                m_SubID = null;
+            }
             UpdateRTD( m_Key, "status", "closed" );
         }
 
@@ -149,9 +206,20 @@ namespace SSAddin {
         }
 
         void Opened( object sender, EventArgs e ) {
-            Logr.Log( String.Format( "TWSCallback.Opened: subscribe message({0})", m_SubscribeMessage ) );
-            m_Client.Send( m_SubscribeMessage );
+            string submsg = String.Format( s_SubscribeMessageFormat, m_AuthToken, "");
+            Logr.Log( String.Format( "TWSCallback.Opened: subscribe message({0})", submsg ) );
+            lock (m_Client) {
+                m_Client.Send( submsg );
+            }
             UpdateRTD( m_Key, "status", "open" );
+        }
+
+        void SetSubID( string subID ) {
+            // This method gets called on a pool thread by TiingoRealTimeMessageHandler
+            lock (m_Client) {
+                m_SubID = subID;
+            }
+            DispatchSubscriptions( );
         }
 
         #endregion Pool thread

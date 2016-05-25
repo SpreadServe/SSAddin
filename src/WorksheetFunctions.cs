@@ -8,6 +8,23 @@ using System.IO;
 using System.Net;
 using ExcelDna.Integration;
 
+// Some notes on threading: there are multiple threads in play in this code, so locking is used fairly
+// freely in the code, and #region/#endregion markers are used to indicate which threads they're running on.
+// There are three kinds of threads...
+// 1. The Excel thread: the worksheet functions in this .cs run on the Excel thread.
+// 2. The background worker thread: this thread is launched in SSWebClient. It's top 
+//    level loop is in SSWebClient.BackgroundWork( ). SSWebClient.AddRequest( ) is used
+//    by the Excel thread to pass work via a queue to this thread. This thread handles
+//    HTTP GET style queries synchronously, so we avoid blocking the Excel thread. It 
+//    also initiates the websock and tiingo websock objects.
+// 3. .Net pool threads: .Net dispatches all kinds of events on pool threads: timers and
+//    socket events. Consequently a lot of the cron code as well as websock and tiingo
+//    websock callbacks run on pool threads. They dump results in caches that the Excel
+//    thread accesses, so locking is needed. They also send results back to Excel via
+//    the RTDServer; Excel is the RTD client. The RTDServer has methods that are invoked on
+//    the Excel thread, so locking is necessary there too.
+// JOS 2016-05-25
+
 namespace SSAddin {
 	public static class WorksheetFunctions {
 		#region Fields
@@ -196,9 +213,9 @@ namespace SSAddin {
             string stopic = String.Join( ".", arrey);
             Logr.Log( String.Format( "s2sub: {0}", stopic));
             // Send a message to the worker thread about this subscription. It may need to fwd
-            // to another object eg TWSCallback for subscription management
+            // to another object eg TWSCallback for subscription management.
             var sdict = new Dictionary<string, string>() { { "type", "s2sub" }, { "key", stopic },
-                                    { "subcache", subcache } };
+                                    { "subcache", subcache }, { "ticker_field", prop}, { "cachekey", ckey} };
             s_WebClient.AddRequest( sdict);
             // Make the RTD call to Excel or SpreadServe's internal RTD API to let it know
             // about the new subscription.

@@ -28,7 +28,6 @@ namespace SSAddin {
         }
 
         public object GetCell( int row, int col ) {
-            // TODO: optimise to not create an ExcelReference on every visit.
             ExcelReference xlref = new ExcelReference( row, row, col, col, "s2cfg" );
             return xlref.GetValue( );
         }

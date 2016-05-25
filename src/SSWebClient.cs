@@ -57,6 +57,7 @@ namespace SSAddin {
             m_InFlight = new HashSet<String>( );
             m_WSCallbacks = new Dictionary<string, WSCallback>( );
             m_Event = new ManualResetEvent( false);
+            m_PendingTiingoSubs = new List<Dictionary<string, string>>( );
             m_WorkerThread = new Thread( BackgroundWork );
             m_WorkerThread.Start( );
             m_QuandlCount = 0;
@@ -349,7 +350,6 @@ namespace SSAddin {
                 UpdateRTD( "tiingo", qkey, "status", "complete" );
                 UpdateRTD( "tiingo", "all", "count", String.Format( "{0}", m_TiingoCount++ ) );
                 Logr.Log( String.Format( "tiingo qkey({0}) complete count({1})", qkey, lineCount ) );
-                // TODO: cache the results
                 List<SSTiingoHistPrice> updates = JsonConvert.DeserializeObject<List<SSTiingoHistPrice>>( sb.ToString( ));
                 s_Cache.UpdateTHPCache( qkey, updates );
                 UpdateRTD( "tiingo", qkey, "count", String.Format( "{0}", updates.Count) );
