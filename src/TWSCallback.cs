@@ -24,11 +24,13 @@ namespace SSAddin {
         protected String m_ProxyPassword;
         protected String m_SubscribeMessage;
         protected Dictionary<String, SortedSet<String>> m_Subscriptions = new Dictionary<string,SortedSet<string>>( );
+        protected TiingoRealTimeMessageHandler m_RTMHandler;
 
         protected static DataCache s_Cache = DataCache.Instance( );
         // Braces are special chars in C# format strings, so we need a double brace to indicate a literal single brace,
         // rather than a the start of a place holder eg {0}
-        protected static String s_SubscribeMessageFormat = "{{\"eventName\":\"subscribe\",\"eventData\":{{\"authToken\": \"{0}\"}}}}";
+        // protected static String s_SubscribeMessageFormat = "{{\"eventName\":\"subscribe\",\"eventData\":{{\"authToken\": \"{0}\"}}}}";
+        protected static String s_SubscribeMessageFormat = "{{ \"eventName\":\"subscribe\",\"authorization\":\"{0}\",\"eventData\":{{ {1} }} }}";
 
         protected static JsonSerializerSettings s_JsonSettings = new JsonSerializerSettings( )
         {
@@ -48,8 +50,9 @@ namespace SSAddin {
             work.TryGetValue( "auth_token", out m_AuthToken);
             m_ClosedCB = ccb;
             try {
-                m_SubscribeMessage = String.Format( s_SubscribeMessageFormat, m_AuthToken );
+                m_SubscribeMessage = String.Format( s_SubscribeMessageFormat, m_AuthToken, "");
                 m_Client = new WebSocket( m_URL);
+                m_RTMHandler = new TiingoRealTimeMessageHandler(m_Client, UpdateRTD, m_Key);
                 m_Client.Opened += new EventHandler( Opened );
                 m_Client.Error += new EventHandler<SuperSocket.ClientEngine.ErrorEventArgs>( Error );
                 m_Client.Closed += new EventHandler( Closed );
@@ -88,13 +91,16 @@ namespace SSAddin {
             }
         }
 
-        void Subscribe( String ticker, String subelem) {
-            SortedSet<String> ss = null;
-            if (!m_Subscriptions.ContainsKey( ticker )) {
-                m_Subscriptions[ticker] = new SortedSet<string>( );
-            }
-            ss = m_Subscriptions[ticker];
-            ss.Add( subelem );
+        public void AddSubscriptions( List<Dictionary<string,string>> subs)
+        {
+            // TODO: deal with work dictionary from BAckgroundWork properly
+            // string ticker = sub["ticker"];
+            // SortedSet<String> ss = null;
+            // if (!m_Subscriptions.ContainsKey( ticker )) {
+            //     m_Subscriptions[ticker] = new SortedSet<string>( );
+            // }
+            // ss = m_Subscriptions[ticker];
+            // ss.Add( subelem );
         }
 
         #endregion Worker thread
@@ -118,17 +124,10 @@ namespace SSAddin {
             Logr.Log( String.Format( "TWSCallback.DataReceived: {0}", e.Data ) );
         }
 
-        protected void HandleToken( JsonToken t, object v ) {
-            // add code to stack token
-        }
-
-        protected void HandleValue( object v ) {
-            // compare current stack to 
-        }
-
         void MessageReceived( object sender, MessageReceivedEventArgs e ) {
             Logr.Log( String.Format( "TWSCallback.MessageReceived: {0}", e.Message ) );
-            var result = JsonConvert.DeserializeObject<IDictionary<string, object>>( e.Message, s_JsonSettings );
+            var msg = JsonConvert.DeserializeObject<IDictionary<string, object>>( e.Message, s_JsonSettings );
+            m_RTMHandler.MessageReceived(msg);
             RTDServer rtd = RTDServer.GetInstance( );
             if (rtd != null) {
                 // rtd.CacheUpdateBatch( String.Format( "twebsock.{0}", m_Key), updates);
@@ -139,7 +138,7 @@ namespace SSAddin {
         void Closed( object sender, EventArgs e ) {
             Logr.Log( String.Format( "TWSCallback.Closed: wskey({0})", m_Key ) );
             if (m_ClosedCB != null)
-                m_ClosedCB( String.Format( "twebsock.{1}", m_Key));
+                m_ClosedCB( String.Format( "twebsock.{0}", m_Key));
             UpdateRTD( m_Key, "status", "closed" );
         }
 

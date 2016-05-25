@@ -188,13 +188,20 @@ namespace SSAddin {
         #region RTD functions
         [ExcelFunction( Description = "RTD: Subscribe to properties of S2 cache." )]
         public static object s2sub(
-            [ExcelArgument( Name = "SubCache", Description = "[quandl|tiingo|cron|websock]" )] string subcache,
+            [ExcelArgument( Name = "SubCache", Description = "[quandl|tiingo|cron|websock|twebsock]" )] string subcache,
             [ExcelArgument(Name="CacheKey", Description="Row key from s2cfg")] string ckey,
-            [ExcelArgument(Name="Property", Description="[status|count|next|last|mX_Y_Z]")] string prop)
+            [ExcelArgument(Name="Property", Description="[status|count|next|last|mX_Y_Z|ticker_field]")] string prop)
         {
             string[] arrey = { subcache, ckey, prop};
             string stopic = String.Join( ".", arrey);
             Logr.Log( String.Format( "s2sub: {0}", stopic));
+            // Send a message to the worker thread about this subscription. It may need to fwd
+            // to another object eg TWSCallback for subscription management
+            var sdict = new Dictionary<string, string>() { { "type", "s2sub" }, { "key", stopic },
+                                    { "subcache", subcache } };
+            s_WebClient.AddRequest( sdict);
+            // Make the RTD call to Excel or SpreadServe's internal RTD API to let it know
+            // about the new subscription.
             return XlCall.RTD( "SSAddin.RTDServer", null, stopic);
         }
         #endregion

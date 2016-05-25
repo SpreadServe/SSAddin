@@ -38,12 +38,15 @@ namespace SSAddin {
         protected HashSet<String>                   m_InFlight;
         protected Dictionary<String, WSCallback>    m_WSCallbacks;
         protected TWSCallback                       m_TWSCallback;
+        protected List<Dictionary<string, string>>  m_PendingTiingoSubs;
 
         protected Thread            m_WorkerThread;     // for executing the web query
         protected ManualResetEvent  m_Event;            // control worker thread sleep
         protected String            m_TempDir;
         protected int               m_QuandlCount;        // total number of quandl queries
         protected int               m_TiingoCount;        // total number of quandl queries
+
+
 
         #region Excel thread methods
 
@@ -84,7 +87,6 @@ namespace SSAddin {
             // auth_token, https_proxy_host...
             string type = req["type"];
             string key = req["key"];
-            string url = req["url"];
             string fkey = String.Format( "{0}.{1}", req["type"], req["key"]);
             // Is this job pending or in progress?
             lock (m_InFlight) {
@@ -92,10 +94,13 @@ namespace SSAddin {
                     Logr.Log( String.Format( "~A AddRequest: {0} is already inflight", fkey ) );
                     return false;                   // so bail
                 }
+                // Nested locking - look out! We're on the Excel thread here as we're invoked by
+                // worksheet functions. The background worker thread does use this lock too, but
+                // not at the same time as m_InFlight, so we should be OK.
                 lock (m_InputQueue) {
                     // Running on the main Excel thread here. Q the work, and
                     // signal the background thread to wake up...
-                    Logr.Log( String.Format( "~A AddRequest adding {0} {1} {2}", type, key, url ) );
+                    Logr.Log( String.Format( "~A AddRequest adding {0} {1}", type, key ) );
                     m_InputQueue.Enqueue( req);
                 }
                 m_InFlight.Add( fkey);
@@ -158,31 +163,64 @@ namespace SSAddin {
                         Logr.Log( String.Format( "~A BackgroundWork thread exiting" ) );
                         return;
                     }
-                    string fkey = String.Format( "{0}.{1}", work["type"], work["key"]);
-                    Logr.Log( String.Format( "~A BackgroundWork new request fkey({0})", fkey) );
+                    string fkey = String.Format("{0}.{1}", work["type"], work["key"]);
+                    Logr.Log(String.Format("~A BackgroundWork new request fkey({0})", fkey));
 
                     if (work["type"] == "quandl") {
+                        // run query synchronously here on background worker thread
                         bool ok = DoQuandlQuery( work);
+                        // query done, so remove key from inflight, which will permit
+                        // the query to be resubmitted
                         lock (m_InFlight) {
                             m_InFlight.Remove( fkey );
                         }
                     }
                     else if (work["type"] == "tiingo") {
+                        // run query synchronously here on background worker thread
                         bool ok = DoTiingoQuery( work );
+                        // query done, so remove key from inflight, which will permit
+                        // the query to be resubmitted
                         lock (m_InFlight) {
                             m_InFlight.Remove( fkey );
                         }
                     }
                     else if (work["type"] == "websock") {
                         WSCallback wscb = new WSCallback( work, this.WSCallbackClosed );
+                        // We don't want to remove the inflight key here as there will be
+                        // async callbacks to WSCallback on pool threads when updates
+                        // arrive on the SS websock. So we leave the key in place to
+                        // prevent AddRequest, which is on the Excel thread, creating 
+                        // a request for a new WSCallback. 
                         lock (m_InFlight) {
                             m_WSCallbacks.Add( fkey, wscb );
                         }
                     }
                     else if (work["type"] == "twebsock") {
+                        // We don't want to remove the inflight key here as there will be
+                        // async callbacks to TWSCallback on pool threads when updates
+                        // arrive on the tiingo websock. So we leave the key in place to
+                        // prevent AddRequest, which is on the Excel thread, creating 
+                        // a request for a new TWSCallback. 
                         lock (m_InFlight) {
                             if (m_TWSCallback == null) {
                                 m_TWSCallback = new TWSCallback( work, this.TWSCallbackClosed );
+                                if (m_PendingTiingoSubs.Count > 0) {
+                                    m_TWSCallback.AddSubscriptions(m_PendingTiingoSubs);
+                                    m_PendingTiingoSubs.Clear();
+                                }
+                            }
+                        }
+                    }
+                    else if (work["type"] == "s2sub") {
+                        if (work["subcache"] == "twebsock") {
+                            // New subscription to a tiingo websock. If the TWSCallback
+                            // doesn't exist yet cache it, but if it does pass it through
+                            lock (m_InFlight) {
+                                m_PendingTiingoSubs.Add(work);
+                                if (m_TWSCallback != null) {
+                                    m_TWSCallback.AddSubscriptions(m_PendingTiingoSubs);
+                                    m_PendingTiingoSubs.Clear();
+                                }
                             }
                         }
                     }
