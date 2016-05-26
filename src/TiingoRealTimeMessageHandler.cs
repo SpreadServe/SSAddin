@@ -46,7 +46,6 @@ namespace SSAddin {
             string mt = msg["messageType"].ToString( );
             switch (mt) {
                 case "I":   // Informational
-                    // TODO: is there a subID?
                     if (msg.ContainsKey( "data" )) {
                         var dd = (IDictionary<string, object>)msg["data"];
                         if (dd.ContainsKey( "subscriptionId" )) {
