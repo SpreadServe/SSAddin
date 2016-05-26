@@ -103,26 +103,23 @@ namespace SSAddin {
             lock (m_Client) {
                 // First, put each subscription into the {ticker:[sub1,sub2] map
                 // that tracks all existing ticker_sub subscriptions.
-                // TODO: add the iex part to the sub sent from the 
+                // We're looking for eg twebsock.iex.appl_mid and we want to ignore
+                // twebsock.iex.hbount.
                 foreach (var sub in subs) {
-                    if ( sub.ContainsKey("cachekey")) {
+                    if ( sub.ContainsKey("cachekey") && sub.ContainsKey("ticker_field")) {
                         string ckey = sub["cachekey"];
-                        // if ckey == m_Key then we've got a generic topic like
-                        // twebsock.iex.hbcount, and we ignore it.
-                        if (ckey != m_Key && sub.ContainsKey( "ticker_field" )) {
-                            string tfld = sub["ticker_field"];
-                            string[] tflds = tfld.Split( '_' );
-                            if (tflds.Length > 1) {
-                                string ticker = tflds[0];
-                                string subelem = tflds[1];
-                                SortedSet<String> ss = null;
-                                if (!m_Subscriptions.ContainsKey( ticker )) {
-                                    m_Subscriptions[ticker] = new SortedSet<string>( );
-                                    m_PendingSubs.Add( ticker );
-                                }
-                                ss = m_Subscriptions[ticker];
-                                ss.Add( subelem );
+                        string tfld = sub["ticker_field"];
+                        string[] tflds = tfld.Split('_');
+                        if (ckey == m_Key && tflds.Length == 2) {
+                            string ticker = tflds[0];
+                            string subelem = tflds[1];
+                            SortedSet<String> ss = null;
+                            if (!m_Subscriptions.ContainsKey( ticker )) {
+                                m_Subscriptions[ticker] = new SortedSet<string>( );
+                                m_PendingSubs.Add( ticker );
                             }
+                            ss = m_Subscriptions[ticker];
+                            ss.Add( subelem );
                         }
                     }
                 }

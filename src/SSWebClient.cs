@@ -104,6 +104,14 @@ namespace SSAddin {
                     Logr.Log( String.Format( "~A AddRequest adding {0} {1}", type, key ) );
                     m_InputQueue.Enqueue( req);
                 }
+                // NB some fkeys are only ever added to m_InFlight, and are never removed. For
+                // instance the s2sub notifications. We only need an s2sub notification to go to
+                // the background thread once to create websock subscriptions. And if it's an
+                // hbcount for instance, there's no work on the background thread, so we'll
+                // let it through once, then block subsequent notifies. We may want to revisit
+                // this logic in future if we need to resubscribe to websock topics. But for
+                // the time being let's work around by starting and stopping the sheet.
+                // JOS 2016-05-26
                 m_InFlight.Add( fkey);
                 m_Event.Set( ); // signal worker thread to wake
             }

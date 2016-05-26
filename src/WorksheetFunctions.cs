@@ -193,7 +193,7 @@ namespace SSAddin {
             return val;
         }
 
-        [ExcelFunction( Description = "Volatile: pull data from S2 web socket cache." )]
+        [ExcelFunction( Description = "Volatile: pull data from S2 web socket cache.", IsVolatile = true)]
         public static object s2vwscache(
             [ExcelArgument( Name = "QueryKey", Description = "websock query key in s2cfg!C" )] string wkey,
             [ExcelArgument( Name = "CellKey", Description = "m2_6_0 for col 3, row 7 on first sheet" )] string ckey) {
