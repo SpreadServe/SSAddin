@@ -29,6 +29,7 @@ namespace SSAddin {
         protected Dictionary<String, SortedSet<String>> m_Subscriptions = new Dictionary<string,SortedSet<string>>( );
         protected TiingoRealTimeMessageHandler m_RTMHandler;
         protected SortedSet<string> m_PendingSubs = new SortedSet<string>( );
+        protected string[] m_MktDataRecord = { "timestamp", "afterhours", "ticker", "bidsz", "bid", "mid", "ask", "asksz"};
 
         protected static DataCache s_Cache = DataCache.Instance( );
         // Braces are special chars in C# format strings, so we need a double brace to indicate a literal single brace,
@@ -37,7 +38,8 @@ namespace SSAddin {
         // protected static String s_SubscribeMessageFormat = "{{\"eventName\":\"subscribe\",\"eventData\":{{\"authToken\": \"{0}\"}}}}";
         protected static String s_SubscribeMessageFormat = "{{ \"eventName\":\"subscribe\",\"authorization\":\"{0}\",\"eventData\":{{ {1} }} }}";
         // Format for composing {1} in s_SubscribeMessageFormat.
-        protected static String s_EventDataFormat = "\"subscriptionId\":{0},\"thresholdLevel\":0,\"tickers\":[{1}]";
+        protected static String s_EventDataFormat = "\"thresholdLevel\":0,\"tickers\":[{0}]";
+        protected static String s_EventDataSubIdFormat = "\"subscriptionId\":{0},\"thresholdLevel\":0,\"tickers\":[{1}]";
 
         protected static JsonSerializerSettings s_JsonSettings = new JsonSerializerSettings( )
         {
@@ -56,7 +58,7 @@ namespace SSAddin {
             m_ClosedCB = ccb;
             try {
                 m_Client = new WebSocket( m_URL);
-                m_RTMHandler = new TiingoRealTimeMessageHandler(m_Client, UpdateRTD, m_Key, SetSubID);
+                m_RTMHandler = new TiingoRealTimeMessageHandler(m_Client, MktDataTick, HeartBeat, SetSubID);
                 m_Client.Opened += new EventHandler( Opened );
                 m_Client.Error += new EventHandler<SuperSocket.ClientEngine.ErrorEventArgs>( Error );
                 m_Client.Closed += new EventHandler( Closed );
@@ -137,18 +139,35 @@ namespace SSAddin {
             // We could be called by either thread, so lock as we'll potentially change object state
             // and send stuff down the socker while another thread wants to do the same.
             lock (m_Client) {
-                if (m_Client.State == WebSocketState.Open && m_SubID != null && m_PendingSubs.Count > 0) {
+                if (m_Client.State == WebSocketState.Open) {
                     // The socket is open, so the Opened( ) callback below must have already fired.
                     // An open socket isn't enough. We also need a subID, which we only have after
                     // we've processed the response to the initial subscription.
                     StringBuilder sb = new StringBuilder( );
+                    int inx = 0;
                     foreach (string sub in m_PendingSubs) {
+                        if (inx > 0)
+                            sb.Append(",");
                         sb.Append( String.Format( "\"{0}\"", sub ) );
+                        inx++;
                     }
-                    string ed = String.Format( s_EventDataFormat, m_SubID, sb.ToString( ) );
+                    string sublist = sb.ToString( );
+                    string ed;
+                    if (m_SubID != null) {
+                        // We've got a subID, so only send a message if we've got tickers to add.
+                        if (sublist.Length == 0)
+                            return;
+                        ed = String.Format(s_EventDataSubIdFormat, m_SubID, sublist);
+                    }
+                    else {
+                        // We don't have a subID, so compose an initial message and send whether or not
+                        // we have a ticker list.
+                        ed = String.Format(s_EventDataFormat, sublist);
+                    }
                     string submsg = String.Format( s_SubscribeMessageFormat, m_AuthToken, ed );
                     Logr.Log( String.Format( "TWSCallback.DispatchSubscriptions: subscribe message({0})", submsg ) );
                     m_Client.Send( submsg );
+                    m_PendingSubs.Clear();
                 }
             }
         }
@@ -176,11 +195,36 @@ namespace SSAddin {
         void MessageReceived( object sender, MessageReceivedEventArgs e ) {
             Logr.Log( String.Format( "TWSCallback.MessageReceived: {0}", e.Message ) );
             var msg = JsonConvert.DeserializeObject<IDictionary<string, object>>( e.Message, s_JsonSettings );
-            m_RTMHandler.MessageReceived(msg);
-            RTDServer rtd = RTDServer.GetInstance( );
-            if (rtd != null) {
-                // rtd.CacheUpdateBatch( String.Format( "twebsock.{0}", m_Key), updates);
+            m_RTMHandler.MessageReceived(msg);  // may cause callbacks to HeartBeat or MktDataTick below
+        }
+
+        public void HeartBeat(int hb) {
+            UpdateRTD( m_Key, "hbcount", hb.ToString( ));
+        }
+
+        public void MktDataTick( IList<object> tick)
+        {
+            // ["2016-05-26T11:43:15.862451977", false, "spy", 100, 209.3, 209.305, 209.31, 200]
+            // [timestamp,after_hours,ticker,bidsz,bid,mid,ask,asksz]
+            if (tick.Count != m_MktDataRecord.Length) {
+                Logr.Log(String.Format("TWSCallback.MktDataTick: fld count not {0}! {1}", 
+                                                        m_MktDataRecord.Length, tick.ToString( )));
+                return;
             }
+            string ticker = tick[2].ToString();
+            lock (m_Client) {
+                if (!m_Subscriptions.ContainsKey(ticker))
+                    return;
+                SortedSet<string> fldset = m_Subscriptions[ticker];
+                for ( int inx = 0; inx < m_MktDataRecord.Length; inx++) {
+                    string fld = m_MktDataRecord[inx];
+                    if ( fldset.Contains( fld)) {
+                         UpdateRTD( m_Key, String.Format( "{0}_{1}", ticker, fld), tick[inx].ToString( ));
+                    }
+                }
+            }
+            // TODO: add TWSCache to s_Cache so that we only need an RTD sub to one field in a record, for
+            // instance bid, and then the rest can be pulled from the cache...
             // s_Cache.UpdateWSCache( m_Key, updates );
         }
 
@@ -203,11 +247,7 @@ namespace SSAddin {
         }
 
         void Opened( object sender, EventArgs e ) {
-            string submsg = String.Format( s_SubscribeMessageFormat, m_AuthToken, "");
-            Logr.Log( String.Format( "TWSCallback.Opened: subscribe message({0})", submsg ) );
-            lock (m_Client) {
-                m_Client.Send( submsg );
-            }
+            DispatchSubscriptions( );
             UpdateRTD( m_Key, "status", "open" );
         }
 

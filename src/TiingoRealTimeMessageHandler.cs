@@ -7,29 +7,30 @@ using WebSocket4Net;
 namespace SSAddin {
     class TiingoRealTimeMessageHandler {
 
-        public delegate void RTDUpdate( string key, string subelem, string val);
+        public delegate void MktDataTick( IList<object> tick);
+        public delegate void HeartBeat(int count);
         public delegate void SetSubID( string subID);
 
         protected static DataCache  s_Cache = DataCache.Instance( );
 
-        protected RTDUpdate m_RTDUpdate;
-        protected SetSubID  m_SetSubID;
-        protected WebSocket m_Socket;
-        protected int       m_HBCount;      // tiingo websock heartbeat count
-        protected string    m_DefaultKey;   // key for non ticker specific updates
+        protected MktDataTick   m_Tick;
+        protected HeartBeat     m_HB;
+        protected SetSubID      m_SetSubID;
+        protected WebSocket     m_Socket;
+        protected int           m_HBCount;      // tiingo websock heartbeat count
 
         #region Worker thread
 
-        public TiingoRealTimeMessageHandler( WebSocket ws, RTDUpdate u, string dkey, SetSubID ssid) {
+        public TiingoRealTimeMessageHandler( WebSocket ws, MktDataTick tick, HeartBeat hb, SetSubID ssid) {
             // RTDServer.GetInstance( ) can instance the RTD server and all the RTD
             // COM machinery the first time we call it so we won't init as a static.
             // TiingoRealTimeMessageHandler and TWSCallback only get instanced when 
             // a worksheet has called twebsock, so we know it's OK to instance 
             // RTDServer at this point as the user definitely wants to do RT stuff.
-            m_RTDUpdate = u;
+            m_Tick = tick;
+            m_HB = hb;
             m_Socket = ws;
             m_HBCount = 0;
-            m_DefaultKey = dkey;
             m_SetSubID = ssid;
         }
 
@@ -54,10 +55,13 @@ namespace SSAddin {
                     }
                     break;
                 case "H":   // Heartbeat
-                    m_HBCount++;
-                    m_RTDUpdate(m_DefaultKey, "hbcount", m_HBCount.ToString());
+                    m_HB( ++m_HBCount);
                     break;
                 case "A":   // Market data
+
+                    if (msg.ContainsKey("data")) {
+                        m_Tick( (IList<object>)msg["data"]);
+                    }
                     break;
                 case "E":   // Error
                     break;
