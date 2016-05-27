@@ -29,7 +29,7 @@ for concrete illustrations of the guidelines below.
 * SSAddin scans the s2cfg sheet from the first row downwards. It will stop scanning when it
   finds a row with an empty cell in column A. This means you can't have spaces between your
   config. It must all be in a single contiguous block from row 1 downwards.
-* The value in column A must be ``quandl``, ``tiingo``, ``cron`` or ``websock``.
+* The value in column A must be ``quandl``, ``tiingo``, ``cron``, ``websock`` or ``twebsock``.
 * Depending on the value in column A there are different expectations for the values in
   column B onwards.
   
@@ -56,8 +56,20 @@ for concrete illustrations of the guidelines below.
       Finally, columns J, K, L & M can be used to specify startDate and endDate for
       historical price queries. 
     * ``config``: column pairs from  C & D onwards are reserved for name value pairs that
-      apply to all queries. Currently only ``auth_token`` is supported. If you put ``auth_token``
-      in column C, then put your actual key in column D for it to be added to all queries.
+      apply to all queries or Tiingo web socket connections (see twebsock below). 
+      Supported config keys are...
+      
+      * ``auth_token``: put ``auth_token`` in column C, and your actual key in column D
+        for it to be added to all queries or used by twebsock.
+      * ``http_proxy_host``: if this appears in column C then column D should give a proxy
+        hostname. SSAddin will then connect via the proxy rather than direct to the internet.
+      * ``http_proxy_port``: port for the proxy connection.
+      * ``http_proxy_user``: user name for the proxy connection. Often this is in DOMAIN\USER
+        format for Windows Active Directory user IDs.
+      * ``http_proxy_password``: password for the proxy connection.
+      
+  * ``twebsock``: when column B contains ``tiingo`` then column C specifies a ``SockKey`` to pass
+    to ``s2twebsock``. Column D should give the URL for the Tiingo API socket eg ``wss://api.tiingo.com/iex``
   
   * ``cron``: when column B contains ``tab`` then column C should have a unique ``CronKey``
     that will be passed to the ``s2cron`` worksheet function which will then get the cron

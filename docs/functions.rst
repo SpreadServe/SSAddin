@@ -122,6 +122,16 @@ Parameters
 
 Return value: "OK" if the function succeeds, an Excel error otherwise.
 
+**s2twebsock**: subscribe via WebSockets to a Tiingo market data feed.
+
+Parameters
+
+* ``SockKey``: a value or cell reference evaluating to a string that matches a value in column C of
+  the s2cfg sheet. The s2cfg row with the matching column C value will be used to specify the URL 
+  for the Tiingo websocket connection. See the tiingows1 example sheet.
+
+Return value: "OK" if the function succeeds, an Excel error otherwise.
+
 **s2wscache**: get a value from a WebSocket subscription cache. 
 
 Parameters

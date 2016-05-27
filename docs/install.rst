@@ -4,7 +4,7 @@ Installing The SpreadServe Addin
 **Installing the addin for the first time**
 
 * Get the zip from https://github.com/SpreadServe/SSAddin
-* Unzip the download and install src\bin\Release\SSAddin.xll as an Excel addin.
+* Unzip the download and install src/bin/Release/SSAddin.xll as an Excel addin.
   
   * Use SSAddin64.xll if you're running a 64 bit Excel.
   * Watch this video if you're unsure about adding an addin https://www.youtube.com/watch?v=i_sijj1NZFM
@@ -22,7 +22,7 @@ Installing The SpreadServe Addin
 
 There are several test spreadsheets in the zip in the xls directory. These sheets all use RTD updates,
 so make sure you are in automatic calculation mode. Go to ``Formulas/Calculation Options`` in Excel and
-select Automatic.
+select Automatic. Use ctrl-alt-F9 to recalc everything and force the RTD subscriptions through.
 
 * ``cron1.xls``: demonstrates the use of the ``s2cron`` and ``s2sub`` functions to set up and track a timer
   that goes off every 20 seconds. The timer will stop at the end of the day.
@@ -42,3 +42,12 @@ select Automatic.
   30 seconds.
 * ``wsock.xls``: uses the `s2websock` function to subscribe to updates from an automated sheet hosted
   by SpreadServe.
+* ``tiingows1.xls``: uses the `s2twebsock` and `s2sub` functions to subscribe to live ticking IEX market data
+  from Tiingo. NB you will need to put your Tiingo authorization token into the s2cfg sheet to connect to Tiingo,
+  and you'll need to be permissioned for IEX data at Tiingo.
+* ``tiingows_option1.cls``: using `s2twebsock` and `s2sub` to drive a Black Scholes option calc with ticking
+  IEX market data.
+  
+Some of the example sheets have ``_proxy`` suffixed to the name. These alternate versions are designed to work
+from behind an internet proxy. They have extra config sheet entries to configure username, password and proxy
+connection details. If you're in a corporate environment you'll probably need to use these.
