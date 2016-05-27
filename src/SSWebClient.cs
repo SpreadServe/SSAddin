@@ -89,10 +89,12 @@ namespace SSAddin {
             string type = req["type"];
             string key = req["key"];
             string fkey = String.Format( "{0}.{1}", req["type"], req["key"]);
+            bool isWebQuery = (type == "quandl" || type == "tiingo");
             // Is this job pending or in progress?
             lock (m_InFlight) {
                 if (m_InFlight.Contains( fkey )) {   // Queued or running...
-                    Logr.Log( String.Format( "~A AddRequest: {0} is already inflight", fkey ) );
+                    if ( isWebQuery)
+                        Logr.Log( String.Format( "~A AddRequest: {0} is already inflight", fkey ) );
                     return false;                   // so bail
                 }
                 // Nested locking - look out! We're on the Excel thread here as we're invoked by
@@ -101,7 +103,8 @@ namespace SSAddin {
                 lock (m_InputQueue) {
                     // Running on the main Excel thread here. Q the work, and
                     // signal the background thread to wake up...
-                    Logr.Log( String.Format( "~A AddRequest adding {0} {1}", type, key ) );
+                    if ( isWebQuery)
+                        Logr.Log( String.Format( "~A AddRequest adding {0} {1}", type, key ) );
                     m_InputQueue.Enqueue( req);
                 }
                 // NB some fkeys are only ever added to m_InFlight, and are never removed. For

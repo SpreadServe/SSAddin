@@ -23,7 +23,7 @@ namespace SSAddin {
             // Why? https://msdn.microsoft.com/en-us/library/system.diagnostics.tracelistener.traceoutputoptions%28v=vs.100%29.aspx
             // Yes: TextWriterTraceListener WriteLine ignores the TraceOptions that add ThreadId, ProcessId etc
             // And I can't get FileLogTraceListener to add those either. Can I be arsed with all the TraceEvent crap necessary?
-            // No! I'm writing multi thread code, so I want my log lines to have threadIds without any explicit code on my part!
+            // No! I'm writing multi threaded code, so I want my log lines to have threadIds without any explicit code on my part!
             // Is that too much to ask?
             string tstamp = DateTime.Now.ToString( "o");
             int tid = Thread.CurrentThread.ManagedThreadId;
