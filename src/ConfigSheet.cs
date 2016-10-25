@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Configuration;
 using System.Linq;
 using System.Text;
 using ExcelDna.Integration;
@@ -147,6 +148,15 @@ namespace SSAddin {
         }
 
         public String GetQueryConfig( String qtype, String ckey ) {
+            // Special handling for the auth tokens so we can avoid putting them in shared sheets
+            if (ckey == "auth_token") {
+                string xkey = String.Format( "{0}.{1}", qtype, ckey );
+                string token = ConfigurationManager.AppSettings.Get( xkey );
+                if (token != null && token != "") {
+                    Logr.Log( String.Format( "GetQueryConfig: using ssaddin.xll.config for {0}:{1}", xkey, token ) );
+                    return token;
+                }
+            }
             // We're looking for a row that has qtype [quandl|tiingo] in the first cell, config in the second,
             // and then ckey in the third.
             int row = FindRow( qtype, "config", ckey );
@@ -154,7 +164,9 @@ namespace SSAddin {
                 Logr.Log( String.Format( "GetQueryConfig: couldn't find {0}.{1}", qtype, ckey ) );
                 return "";
             }
-            return GetCellAsString( row, 3 );
+            string val = GetCellAsString( row, 3 );
+            Logr.Log( String.Format( "GetQueryConfig: returning row {0} col 3 value:{1}", row, val ) );
+            return val;
         }
 
         public Tuple<String,DateTime?,DateTime?> GetCronTab( String ctabkey ) {

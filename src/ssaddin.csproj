@@ -35,8 +35,9 @@
     <StartupObject />
   </PropertyGroup>
   <ItemGroup>
-    <Reference Include="ExcelDna.Integration">
-      <HintPath>..\..\..\bin\ssaddin\ExcelDna.Integration.dll</HintPath>
+    <Reference Include="ExcelDna.Integration, Version=0.34.6007.22054, Culture=neutral, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>Packages\Excel-DNA.0.32.0\lib\ExcelDna.Integration.dll</HintPath>
     </Reference>
     <Reference Include="NCrontab">
       <HintPath>..\..\..\bin\ssaddin\NCrontab.dll</HintPath>
@@ -54,6 +55,7 @@
       <HintPath>..\..\..\bin\ssaddin\SuperSocket.ClientEngine.Protocol.dll</HintPath>
     </Reference>
     <Reference Include="System" />
+    <Reference Include="System.configuration" />
     <Reference Include="System.Core" />
     <Reference Include="System.Windows.Forms" />
     <Reference Include="WebSocket4Net">
@@ -65,11 +67,13 @@
     <Compile Include="CronManager.cs" />
     <Compile Include="DataCache.cs" />
     <Compile Include="HttpConnectProxy.cs" />
+    <Compile Include="JsonToDictionary.cs" />
     <Compile Include="Logr.cs" />
     <Compile Include="ProxyConnectorBase.cs" />
     <Compile Include="RTDServer.cs" />
     <Compile Include="ConfigSheet.cs" />
     <Compile Include="SSWebClient.cs" />
+    <Compile Include="TiingoRealTimeMessageHandler.cs" />
     <Compile Include="TWSCallback.cs" />
     <Compile Include="WorksheetFunctions.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
@@ -80,6 +84,9 @@
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
     <None Include="packages.config" />
+    <None Include="SSAddin.xll.config">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
   </ItemGroup>
   <ItemGroup />
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
