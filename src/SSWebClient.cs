@@ -317,10 +317,10 @@ namespace SSAddin {
                 return true;
 			}
 			catch( System.IO.IOException ex) {
-                Logr.Log( String.Format( "quandl qkey({0}) {1}", qkey, ex) );
+                Logr.Log( String.Format( "quandl qkey({0}) url({1}) {2}", qkey, url, ex) );
 			}
             catch (System.Net.WebException ex) {
-                Logr.Log( String.Format( "quandl qkey({0}) {1}", qkey, ex ) );
+                Logr.Log( String.Format( "quandl qkey({0}) url({1}) {2}", qkey, url, ex ) );
             }
             return false;
 		}

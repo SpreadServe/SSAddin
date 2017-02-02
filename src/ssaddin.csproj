@@ -86,6 +86,7 @@
     <None Include="packages.config" />
     <None Include="SSAddin.xll.config">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <SubType>Designer</SubType>
     </None>
   </ItemGroup>
   <ItemGroup />

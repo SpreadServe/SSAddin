@@ -21,6 +21,8 @@ namespace SSAddin {
         protected static Dictionary<string, Func<object, string>> s_TiingoQueryFieldConverters = new Dictionary<string, Func<object, string>>( );
         protected static string[] s_ProxyKeys = { "http_proxy_host", "http_proxy_port", "http_proxy_user", "http_proxy_password" };
 
+        protected Dictionary<string, string> m_ConfigCache = new Dictionary<string, string>();
+
         public ConfigSheet( ) {
             s_QuandlQueryFieldConverters["trim_start"] = ExcelDateNumberToString;
             s_QuandlQueryFieldConverters["trim_end"] = ExcelDateNumberToString;
@@ -147,25 +149,34 @@ namespace SSAddin {
             return BuildTiingoQuery( qterms );
         }
 
-        public String GetQueryConfig( String qtype, String ckey ) {
-            // Special handling for the auth tokens so we can avoid putting them in shared sheets
-            if (ckey == "auth_token") {
-                string xkey = String.Format( "{0}.{1}", qtype, ckey );
-                string token = ConfigurationManager.AppSettings.Get( xkey );
-                if (token != null && token != "") {
-                    Logr.Log( String.Format( "GetQueryConfig: using ssaddin.xll.config for {0}:{1}", xkey, token ) );
-                    return token;
-                }
+        public String GetQueryConfig(String qtype, String ckey)
+        {
+            string xkey = String.Format("{0}.{1}", qtype, ckey);
+            if (m_ConfigCache.ContainsKey(xkey))
+            {
+                return m_ConfigCache[xkey];
+            }
+            // Look for config in .Net .config file too. Could be auth_token or http_proxy,
+            // because we don't want to expose it in the sheet, and we don't want to repeat
+            // in info in every sheet.
+            string token = ConfigurationManager.AppSettings.Get( xkey );
+            if (token != null && token != "") {
+                m_ConfigCache[xkey] = token;
+                Logr.Log( String.Format( "GetQueryConfig: using ssaddin.xll.config for {0}:{1}", xkey, token ) );
+                return token;
             }
             // We're looking for a row that has qtype [quandl|tiingo] in the first cell, config in the second,
             // and then ckey in the third.
             int row = FindRow( qtype, "config", ckey );
             if (row == -1) {
                 Logr.Log( String.Format( "GetQueryConfig: couldn't find {0}.{1}", qtype, ckey ) );
+                // Caching "" as a value will ensure we get this logged once only
+                m_ConfigCache[xkey] = "";
                 return "";
             }
             string val = GetCellAsString( row, 3 );
             Logr.Log( String.Format( "GetQueryConfig: returning row {0} col 3 value:{1}", row, val ) );
+            m_ConfigCache[xkey] = val;
             return val;
         }
 
