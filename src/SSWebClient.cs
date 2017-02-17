@@ -336,7 +336,7 @@ namespace SSAddin {
                 var client = new WebClient( );
                 ConfigureProxy(work, client);
                 client.Headers.Set( "Content-Type", "application/json" );
-                client.Headers.Set( "Authorization", auth_token );
+                client.Headers.Set( "Authorization", String.Format("Token {0}", auth_token ));
                 Stream data = client.OpenRead( url );
                 var reader = new StreamReader( data );
                 // Local file to dump result
@@ -367,10 +367,10 @@ namespace SSAddin {
                 return true;
             }
             catch (System.IO.IOException ex) {
-                Logr.Log( String.Format( "tiingo qkey({0}) {1}", qkey, ex ) );
+                Logr.Log( String.Format( "tiingo qkey({0}) url({1}) {2}", qkey, url, ex ) );
             }
             catch (System.Net.WebException ex) {
-                Logr.Log( String.Format( "tiingo  qkey({0}) {1}", qkey, ex ) );
+                Logr.Log( String.Format( "tiingo  qkey({0}) url({1}) {2}", qkey, url, ex ) );
             }
             return false;
         }
