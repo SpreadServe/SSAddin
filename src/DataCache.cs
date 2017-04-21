@@ -10,6 +10,7 @@ namespace SSAddin {
     // data in, and the Excel thread can pull data out. 
     class DataCache {
         protected Dictionary<string,List<String[]>> m_QCache = new Dictionary<string, List<String[]>>( );
+        protected Dictionary<string, BareMetricsSummaryArrayElement> m_BSCache = new Dictionary<string, BareMetricsSummaryArrayElement>();
         protected Dictionary<string, List<SSTiingoHistPrice>> m_THPCache = new Dictionary<string, List<SSTiingoHistPrice>>( );
         protected Dictionary<string, string> m_WSCache = new Dictionary<string, string>( );
         protected static DataCache s_Instance;
@@ -55,6 +56,15 @@ namespace SSAddin {
             }
         }
 
+        public void UpdateBareSummaryCache(string wkey, BareMetricsSummary updates)
+        {
+            lock (m_BSCache) {
+                foreach (BareMetricsSummaryArrayElement sum in updates.metrics) {
+                    m_BSCache[sum.human_date] = sum;
+                }
+            }
+        }
+
         public bool ContainsQuandlKey( string qkey ) {
             lock (m_QCache) {
                 return m_QCache.ContainsKey( qkey );
@@ -80,6 +90,7 @@ namespace SSAddin {
                     m_THPCache.Remove( qkey );
             }
         }
+
 
         public string GetQuandlCell( string qkey, int row, int col ) {
             lock (m_QCache) {

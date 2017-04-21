@@ -35,31 +35,21 @@
     <StartupObject />
   </PropertyGroup>
   <ItemGroup>
-    <Reference Include="ExcelDna.Integration, Version=0.34.6007.22054, Culture=neutral, processorArchitecture=MSIL">
-      <SpecificVersion>False</SpecificVersion>
-      <HintPath>Packages\Excel-DNA.0.32.0\lib\ExcelDna.Integration.dll</HintPath>
+    <Reference Include="ExcelDna.Integration">
+      <HintPath>Packages\Excel-DNA.0.32.0\tools\ExcelDna.Integration.dll</HintPath>
     </Reference>
     <Reference Include="NCrontab">
-      <HintPath>..\..\..\bin\ssaddin\NCrontab.dll</HintPath>
+      <HintPath>..\..\NCrontab\bin\Debug\NCrontab.dll</HintPath>
     </Reference>
     <Reference Include="Newtonsoft.Json">
-      <HintPath>..\..\..\bin\ssaddin\Newtonsoft.Json.dll</HintPath>
-    </Reference>
-    <Reference Include="SuperSocket.ClientEngine.Common">
-      <HintPath>..\..\..\bin\ssaddin\SuperSocket.ClientEngine.Common.dll</HintPath>
-    </Reference>
-    <Reference Include="SuperSocket.ClientEngine.Core">
-      <HintPath>..\..\..\bin\ssaddin\SuperSocket.ClientEngine.Core.dll</HintPath>
-    </Reference>
-    <Reference Include="SuperSocket.ClientEngine.Protocol">
-      <HintPath>..\..\..\bin\ssaddin\SuperSocket.ClientEngine.Protocol.dll</HintPath>
+      <HintPath>Packages\Newtonsoft.Json.6.0.8\lib\net40\Newtonsoft.Json.dll</HintPath>
     </Reference>
     <Reference Include="System" />
     <Reference Include="System.configuration" />
     <Reference Include="System.Core" />
     <Reference Include="System.Windows.Forms" />
     <Reference Include="WebSocket4Net">
-      <HintPath>..\..\..\bin\ssaddin\WebSocket4Net.dll</HintPath>
+      <HintPath>Packages\WebSocket4Net.0.14.1\lib\net40\WebSocket4Net.dll</HintPath>
     </Reference>
   </ItemGroup>
   <ItemGroup>

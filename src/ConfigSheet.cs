@@ -17,8 +17,11 @@ namespace SSAddin {
 
         protected static String s_QuandlBaseURL = "https://www.quandl.com/api/v1/datasets";
         protected static String s_TiingoBaseURL = "https://api.tiingo.com/tiingo";
+        protected static String s_BareBaseURL = "https://api.baremetrics.com/v1/metrics";
+        protected static String s_BareSandBaseURL = "https://api-sandbox.baremetrics.com/v1/metrics";
         protected static Dictionary<string, Func<object, string>> s_QuandlQueryFieldConverters = new Dictionary<string, Func<object, string>>( );
         protected static Dictionary<string, Func<object, string>> s_TiingoQueryFieldConverters = new Dictionary<string, Func<object, string>>( );
+        protected static Dictionary<string, Func<object, string>> s_BareQueryFieldConverters = new Dictionary<string, Func<object, string>>();
         protected static string[] s_ProxyKeys = { "http_proxy_host", "http_proxy_port", "http_proxy_user", "http_proxy_password" };
 
         protected Dictionary<string, string> m_ConfigCache = new Dictionary<string, string>();
@@ -28,6 +31,8 @@ namespace SSAddin {
             s_QuandlQueryFieldConverters["trim_end"] = ExcelDateNumberToString;
             s_TiingoQueryFieldConverters["startDate"] = ExcelDateNumberToString;
             s_TiingoQueryFieldConverters["endDate"] = ExcelDateNumberToString;
+            s_BareQueryFieldConverters["start_date"] = ExcelDateNumberToString;
+            s_BareQueryFieldConverters["end_date"] = ExcelDateNumberToString;
         }
 
         public object GetCell( int row, int col ) {
@@ -109,6 +114,53 @@ namespace SSAddin {
             return sb.ToString( );
         }
 
+        public String BuildBareQuery(Dictionary<string, object> qterms)
+        {
+            // Must specify a query type
+            if (!qterms.ContainsKey("qtype"))
+                return "";
+            // Now deal with the minimal essential we need to build a valid baremetrics query
+            bool sandbox = false;
+            if (qterms.ContainsKey("sandbox")) {
+                try {
+                    sandbox = Convert.ToBoolean(qterms["sandbox"]);
+                }
+                catch ( Exception ex) {
+                    Logr.Log(String.Format("BuildBareQuery: bad sandbox value {0}\n{1}", qterms["sandbox"].ToString( ), ex));
+                }
+            }
+            StringBuilder sb = new StringBuilder(sandbox ? s_BareSandBaseURL : s_BareBaseURL);
+            String qtype = qterms["qtype"].ToString( );
+            if (qtype == "summary") {
+                // null op for summary as we append the start and end dates below
+            }
+            else {
+                return "";
+            }
+            qterms.Remove("qtype");
+            // Are there any more values in the Dict? Maybe start_date and end_date...
+            if (qterms.Count > 0)
+            {
+                string prefix = "?";
+                string val;
+                foreach (KeyValuePair<string, object> item in qterms)
+                {
+                    if (s_BareQueryFieldConverters.ContainsKey(item.Key))
+                    {
+                        Func<object, string> converter = s_BareQueryFieldConverters[item.Key];
+                        val = converter(item.Value);
+                    }
+                    else
+                    {
+                        val = item.Value.ToString();
+                    }
+                    sb.Append(String.Format("{0}{1}={2}", prefix, item.Key, val));
+                    prefix = "&";
+                }
+            }
+            return sb.ToString();
+        }
+
         public int FindRow( string c0, string c1, string c2) {
             // We're looking for a row that has c0 in the first cell, c1 in the second,
             // and then c2 in the third.
@@ -126,7 +178,7 @@ namespace SSAddin {
         }
 
         public String GetQueryURL( String qtype, String qkey) {
-            // We're looking for a row that has 'quandl' or 'tiingo' in the first cell,
+            // We're looking for a row that has 'quandl', 'tiingo' or 'baremetrics' in the first cell,
             // query in the second, and then qkey in the third.
             int row = FindRow( qtype, "query", qkey);
             if (row == -1) {
@@ -146,6 +198,8 @@ namespace SSAddin {
             } while (name != null && name != "");
             if ( qtype == "quandl")
                 return BuildQuandlQuery( qterms );
+            if (qtype == "baremetrics")
+                return BuildBareQuery(qterms);
             return BuildTiingoQuery( qterms );
         }
 

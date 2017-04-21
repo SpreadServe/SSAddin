@@ -12,7 +12,7 @@ using Newtonsoft.Json;
 
 namespace SSAddin {
     #region Deserialization classes
-    // rtwebsvr websock format
+    // tiingo historical data format
     class SSTiingoHistPrice {
         public string   date { get; set; }
         public float    open { get; set; }
@@ -26,6 +26,38 @@ namespace SSAddin {
         public float    adjLow { get; set; }
         public float    adjVolume { get; set; }
     }
+    // baremetrics metrics query responses
+    // https://developers.baremetrics.com/reference#available-metrics
+    class BareMetricsSummaryArrayElement {
+        public string   human_date { get; set; }
+        public string   date { get; set; }
+        public int      active_customers { get; set; }
+        public int      active_subscriptions { get; set; }
+        public int      add_on_mrr { get; set; }
+        public int      arpu { get; set; }
+        public int      arr { get; set; }
+        public int      cancellations { get; set; }
+        public int      coupons { get; set; }
+        public int      downgrades { get; set; }
+        public int      failed_charges { get; set; }
+        public int      fees { get; set; }
+        public int      ltv { get; set; }
+        public int      mrr { get; set; }
+        public int      net_revenue { get; set; }
+        public int      new_customers { get; set; }
+        public int      other_revenue { get; set; }
+        public int      reactivated_customers { get; set; }
+        public int      refunds { get; set; }
+        public int      revenue_churn { get; set; }
+        public int      trial_conversions { get; set; }
+        public int      upgrades { get; set; }
+        public int      user_churn { get; set; }
+    }
+
+    class BareMetricsSummary {
+        public List<BareMetricsSummaryArrayElement> metrics { get; set; }
+    }
+
     #endregion
 
     class SSWebClient {
@@ -43,9 +75,9 @@ namespace SSAddin {
         protected Thread            m_WorkerThread;     // for executing the web query
         protected ManualResetEvent  m_Event;            // control worker thread sleep
         protected String            m_TempDir;
-        protected int               m_QuandlCount;        // total number of quandl queries
-        protected int               m_TiingoCount;        // total number of quandl queries
-
+        protected int               m_QuandlCount;      // total number of quandl queries
+        protected int               m_TiingoCount;      // total number of tiingo queries
+        protected int               m_BareCount;        // total number of baremetrics queries
 
 
         #region Excel thread methods
@@ -62,6 +94,7 @@ namespace SSAddin {
             m_WorkerThread.Start( );
             m_QuandlCount = 0;
             m_TiingoCount = 0;
+            m_BareCount = 0;
 
             // Push out an RTD update for the overall quandl query count. This will mean
             // that trigger parms driven by quandl.all.count don't have #N/A as input for
@@ -69,6 +102,7 @@ namespace SSAddin {
             // calc almost immediately. JOS 2015-07-29
             UpdateRTD( "quandl", "all", "count", String.Format( "{0}", m_QuandlCount++));
             UpdateRTD( "tiingo", "all", "count", String.Format( "{0}", m_TiingoCount++ ) );
+            UpdateRTD( "baremetrics", "all", "count", String.Format("{0}", m_BareCount++));
         }
 
         public static SSWebClient Instance( ) {
@@ -89,7 +123,7 @@ namespace SSAddin {
             string type = req["type"];
             string key = req["key"];
             string fkey = String.Format( "{0}.{1}", req["type"], req["key"]);
-            bool isWebQuery = (type == "quandl" || type == "tiingo");
+            bool isWebQuery = (type == "quandl" || type == "tiingo" || type == "baremetrics");
             // Is this job pending or in progress?
             lock (m_InFlight) {
                 if (m_InFlight.Contains( fkey )) {   // Queued or running...
@@ -194,6 +228,17 @@ namespace SSAddin {
                         // the query to be resubmitted
                         lock (m_InFlight) {
                             m_InFlight.Remove( fkey );
+                        }
+                    }
+                    else if (work["type"] == "baremetrics")
+                    {
+                        // run query synchronously here on background worker thread
+                        bool ok = DoBareQuery(work);
+                        // query done, so remove key from inflight, which will permit
+                        // the query to be resubmitted
+                        lock (m_InFlight)
+                        {
+                            m_InFlight.Remove(fkey);
                         }
                     }
                     else if (work["type"] == "websock") {
@@ -349,8 +394,7 @@ namespace SSAddin {
                 s_Cache.ClearTiingo( qkey );
                 StringBuilder sb = new StringBuilder( );
                 while (reader.Peek( ) >= 0) {
-                    // For each CSV line returned by quandl, dump to localFS, add to in mem cache, and 
-                    // send a line count update to any RTD subscriber
+                    // For each json line returned by tiingo, dump to localFS, add to in mem cache
                     line = reader.ReadLine( );
                     jsnf.WriteLine( line );
                     sb.AppendLine( line );
@@ -371,6 +415,59 @@ namespace SSAddin {
             }
             catch (System.Net.WebException ex) {
                 Logr.Log( String.Format( "tiingo  qkey({0}) url({1}) {2}", qkey, url, ex ) );
+            }
+            return false;
+        }
+
+        protected bool DoBareQuery(Dictionary<string, string> work)
+        {
+            string qkey = work["key"];
+            string url = work["url"];
+            string auth_token = work["auth_token"];
+            string line = "";
+            string lineCount = "0";
+            try
+            {
+                // Set up the web client to HTTP GET
+                var client = new WebClient();
+                ConfigureProxy(work, client);
+                client.Headers.Set("Content-Type", "application/json");
+                client.Headers.Set("Authorization", String.Format("Bearer {0}", auth_token));
+                Stream data = client.OpenRead(url);
+                var reader = new StreamReader(data);
+                // Local file to dump result
+                int pid = Process.GetCurrentProcess().Id;
+                string jsnfname = String.Format("{0}\\{1}_{2}.jsn", m_TempDir, qkey, pid);
+                Logr.Log(String.Format("running baremetric qkey({0}) {1} persisted at {2}", qkey, url, jsnfname));
+                var jsnf = new StreamWriter(jsnfname);
+                UpdateRTD("baremetrics", qkey, "status", "starting");
+                // Clear any previous result from the cache so we don't append repeated data
+                StringBuilder sb = new StringBuilder();
+                while (reader.Peek() >= 0)
+                {
+                    // For each json line returned by baremetrics, dump to localFS, add to in mem cache
+                    line = reader.ReadLine();
+                    jsnf.WriteLine(line);
+                    sb.AppendLine(line);
+                }
+                jsnf.Close();
+                data.Close();
+                reader.Close();
+                UpdateRTD("baremetrics", qkey, "status", "complete");
+                UpdateRTD("baremetrics", "all", "count", String.Format("{0}", m_BareCount++));
+                Logr.Log(String.Format("baremetrics qkey({0}) complete count({1})", qkey, lineCount));
+                BareMetricsSummary summary = JsonConvert.DeserializeObject<BareMetricsSummary>(sb.ToString());
+                s_Cache.UpdateBareSummaryCache(qkey, summary);
+                UpdateRTD("baremetrics", qkey, "count", String.Format("{0}", summary.metrics.Count));
+                return true;
+            }
+            catch (System.IO.IOException ex)
+            {
+                Logr.Log(String.Format("baremetrics qkey({0}) url({1}) {2}", qkey, url, ex));
+            }
+            catch (System.Net.WebException ex)
+            {
+                Logr.Log(String.Format("baremetrics qkey({0}) url({1}) {2}", qkey, url, ex));
             }
             return false;
         }
