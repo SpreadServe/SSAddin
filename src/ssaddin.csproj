@@ -38,6 +38,7 @@
     <Reference Include="ExcelDna.Integration">
       <HintPath>Packages\Excel-DNA.0.32.0\tools\ExcelDna.Integration.dll</HintPath>
     </Reference>
+    <Reference Include="Microsoft.CSharp" />
     <Reference Include="NCrontab">
       <HintPath>..\..\NCrontab\bin\Debug\NCrontab.dll</HintPath>
     </Reference>

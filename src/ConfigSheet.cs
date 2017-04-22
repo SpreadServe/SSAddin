@@ -27,12 +27,15 @@ namespace SSAddin {
         protected Dictionary<string, string> m_ConfigCache = new Dictionary<string, string>();
 
         public ConfigSheet( ) {
+            // Quandl and Tiingo funcs expect Excel dates. In the GUI Excel recognises the date, and converts to a number
             s_QuandlQueryFieldConverters["trim_start"] = ExcelDateNumberToString;
             s_QuandlQueryFieldConverters["trim_end"] = ExcelDateNumberToString;
             s_TiingoQueryFieldConverters["startDate"] = ExcelDateNumberToString;
             s_TiingoQueryFieldConverters["endDate"] = ExcelDateNumberToString;
-            s_BareQueryFieldConverters["start_date"] = ExcelDateNumberToString;
-            s_BareQueryFieldConverters["end_date"] = ExcelDateNumberToString;
+            // For baremetrics queries date params should be supplied by s2today, which arrives in here as
+            // a string, not a number like an Excel date.
+            // s_BareQueryFieldConverters["start_date"] = ExcelDateNumberToString;
+            // s_BareQueryFieldConverters["end_date"] = ExcelDateNumberToString;
         }
 
         public object GetCell( int row, int col ) {
@@ -128,11 +131,22 @@ namespace SSAddin {
                 catch ( Exception ex) {
                     Logr.Log(String.Format("BuildBareQuery: bad sandbox value {0}\n{1}", qterms["sandbox"].ToString( ), ex));
                 }
+                qterms.Remove( "sandbox" );
             }
             StringBuilder sb = new StringBuilder(sandbox ? s_BareSandBaseURL : s_BareBaseURL);
             String qtype = qterms["qtype"].ToString( );
             if (qtype == "summary") {
                 // null op for summary as we append the start and end dates below
+            }
+            else if (qtype == "metric") {
+                if ( qterms.ContainsKey( "metric")) {
+                    sb.Append( String.Format( "/{0}", qterms["metric"]));
+                    qterms.Remove( "metric" );
+                }
+                else {
+                    Logr.Log(String.Format("BuildBareQuery: qtype==metric, but no metric specified eg metric=mrr"));
+                    return "";
+                }
             }
             else {
                 return "";

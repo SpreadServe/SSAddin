@@ -196,6 +196,38 @@ namespace SSAddin {
             return s2tcache( qkey, xoffset, yoffset, null );
         }
 
+        [ExcelFunction( Description = "Pull data from S2 baremetrics cache." )]
+        public static object s2bcache(
+            [ExcelArgument( Name = "QueryKey", Description = "baremetrics query key in s2cfg!C" )] string qkey,
+            [ExcelArgument( Name = "Date", Description = "date key into result set. Use s2today, not Excel's TODAY" )] int xldate,
+            [ExcelArgument( Name = "Field", Description = "field in the result set" )] string field,
+            [ExcelArgument( Name = "Trigger", Description = "dummy to trigger recalc" )] object trigger ) {
+            if (!s_Cache.ContainsBareKey( qkey )) {
+                return ExcelMissing.Value;
+            }
+            string val = s_Cache.GetBareField( qkey, s_ConfigSheet.ExcelDateNumberToString( xldate), field);
+            if (val == null) {
+                return ExcelError.ExcelErrorNA; //  ExcelMissing.Value;
+            }
+            return val;
+        }
+
+        [ExcelFunction( Description = "Volatile: pull data from S2 baremetrics cache.", IsVolatile = true )]
+        public static object s2vbcache(
+            [ExcelArgument( Name = "QueryKey", Description = "baremetrics query key in s2cfg!C" )] string qkey,
+            [ExcelArgument( Name = "Date", Description = "date key into result set. Use s2today, not Excel's TODAY" )] int xldate,
+            [ExcelArgument( Name = "Field", Description = "field in the result set" )] string field ) {
+            return s2bcache( qkey, xldate, field, null );
+        }
+
+        [ExcelFunction( Description = "Non volatile alternate to Excel's TODAY.")]
+        public static object s2today(
+            [ExcelArgument( Name = "Offset", Description = "days +/- from today" )] int offset,
+            [ExcelArgument( Name = "Trigger", Description = "dummy to trigger recalc" )] object trigger ) {
+            DateTime dt = DateTime.Now.AddDays( Convert.ToDouble( offset ) );
+            return dt.ToString( "yyyy-MM-dd" );
+        }
+
         [ExcelFunction( Description = "Pull data from S2 web socket cache." )]
         public static object s2wscache(
             [ExcelArgument( Name = "QueryKey", Description = "websock query key in s2cfg!C" )] string wkey,

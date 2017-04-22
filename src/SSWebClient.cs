@@ -8,7 +8,7 @@ using System.Net;
 using System.Diagnostics;
 using NCrontab;
 using Newtonsoft.Json;
-
+using Newtonsoft.Json.Linq;
 
 namespace SSAddin {
     #region Deserialization classes
@@ -456,9 +456,10 @@ namespace SSAddin {
                 UpdateRTD("baremetrics", qkey, "status", "complete");
                 UpdateRTD("baremetrics", "all", "count", String.Format("{0}", m_BareCount++));
                 Logr.Log(String.Format("baremetrics qkey({0}) complete count({1})", qkey, lineCount));
-                BareMetricsSummary summary = JsonConvert.DeserializeObject<BareMetricsSummary>(sb.ToString());
-                s_Cache.UpdateBareSummaryCache(qkey, summary);
-                UpdateRTD("baremetrics", qkey, "count", String.Format("{0}", summary.metrics.Count));
+                // BareMetricsSummary summary = JsonConvert.DeserializeObject<BareMetricsSummary>(sb.ToString());
+                dynamic updates = JsonConvert.DeserializeObject( sb.ToString( ) );
+                s_Cache.UpdateBareCache(qkey, updates);
+                UpdateRTD("baremetrics", qkey, "count", String.Format("{0}", updates.metrics.Count));
                 return true;
             }
             catch (System.IO.IOException ex)

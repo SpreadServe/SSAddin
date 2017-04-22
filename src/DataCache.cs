@@ -3,6 +3,7 @@ using System.Reflection;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using Newtonsoft.Json.Linq;
 
 namespace SSAddin {
     // DataCache is the cache for non real time data like tiingo and quandl historical data result sets.
@@ -10,11 +11,13 @@ namespace SSAddin {
     // data in, and the Excel thread can pull data out. 
     class DataCache {
         protected Dictionary<string,List<String[]>> m_QCache = new Dictionary<string, List<String[]>>( );
-        protected Dictionary<string, BareMetricsSummaryArrayElement> m_BSCache = new Dictionary<string, BareMetricsSummaryArrayElement>();
+        // protected Dictionary<string, BareMetricsSummaryArrayElement> m_BSCache = new Dictionary<string, BareMetricsSummaryArrayElement>();
+        protected Dictionary<string, Dictionary<String, JObject>> m_BCache = new Dictionary<string, Dictionary<String, JObject>>( );
         protected Dictionary<string, List<SSTiingoHistPrice>> m_THPCache = new Dictionary<string, List<SSTiingoHistPrice>>( );
         protected Dictionary<string, string> m_WSCache = new Dictionary<string, string>( );
         protected static DataCache s_Instance;
         protected static object s_InstanceLock = new object( );
+        protected static char[] s_delimiters = { '.' };
 
         private DataCache( ) {
         }
@@ -56,12 +59,31 @@ namespace SSAddin {
             }
         }
 
-        public void UpdateBareSummaryCache(string wkey, BareMetricsSummary updates)
+        public void UpdateBareCache(string wkey, dynamic updates)
         {
-            lock (m_BSCache) {
-                foreach (BareMetricsSummaryArrayElement sum in updates.metrics) {
-                    m_BSCache[sum.human_date] = sum;
+            if ( updates == null) {
+                Logr.Log( String.Format( "UpdateBareCache wkey({0}) updates==null!", wkey ) );
+                return;
+            }
+            JToken metrics = null;
+            if ( !updates.TryGetValue( "metrics", out metrics)) {
+                Logr.Log( String.Format( "UpdateBareCache wkey({0}) couldn't get metrics!", wkey ) );
+                return;
+            }
+            lock (m_BCache) {
+                // the object returned by baremetrics always has an element
+                // called 'metrics', and metrics is always an array of objects
+                // that have data and human_date attributes. Beyond that we 
+                // may have all sorts of other members and nesting.
+                Dictionary<String, JObject> cached = null;
+                if (!m_BCache.TryGetValue( wkey, out cached ))
+                    cached = new Dictionary<string, JObject>( );
+                foreach (JObject sum in metrics) {
+                    JToken sdate = null;
+                    if (sum.TryGetValue( "human_date", out sdate ))
+                        cached[sdate.ToString( )] = sum;
                 }
+                m_BCache[wkey] = cached;
             }
         }
 
@@ -81,6 +103,12 @@ namespace SSAddin {
         public bool ContainsTiingoKey( string qkey ) {
             lock (m_THPCache) {
                 return m_THPCache.ContainsKey( qkey );
+            }
+        }
+
+        public bool ContainsBareKey( string qkey ) {
+            lock (m_BCache) {
+                return m_BCache.ContainsKey( qkey );
             }
         }
 
@@ -129,6 +157,49 @@ namespace SSAddin {
                 if (!m_WSCache.ContainsKey( key ))
                     return null;
                 return m_WSCache[key];
+            }
+        }
+
+        public string GetBareField( string qkey, string sdate, string field) {
+            // TODO: add more logging for failed nav thru the obj tree
+            lock (m_BCache) {
+                if (!m_BCache.ContainsKey( qkey ))
+                    return null;
+                Dictionary<String, JObject> cached = m_BCache[qkey];
+                if (!cached.ContainsKey( sdate ))
+                    return null;
+                JObject jobj = cached[sdate];
+                string[] subs = field.Split( s_delimiters );
+                JToken jsub = null;
+                JArray jarr = null;
+                uint inx = 0;
+                bool ok = false;
+                foreach ( string sub in subs) {
+                    if ( jobj != null) {
+                        ok = jobj.TryGetValue( sub, out jsub );
+                    }
+                    else if ( jarr != null) {
+                        ok = UInt32.TryParse( sub, out inx );
+                        if (ok && inx < jarr.Count)
+                            jsub = jarr[inx];
+                        else
+                            ok = false;
+                    }
+                    if (!ok)
+                        return null;
+                    // Have we hit an atomic, or do we go round again?
+                    if ( jsub is JValue)
+                        return jsub.ToString( );
+                    // We haven't hit an atomic, so it's either an object or an array/
+                    jobj = null;
+                    jarr = null;
+                    ok = false;
+                    if (jsub is JObject)
+                        jobj = jsub as JObject;
+                    else if (jsub is JArray)
+                        jarr = jsub as JArray;
+                }
+                return null;
             }
         }
     }
