@@ -148,6 +148,16 @@ namespace SSAddin {
                     return "";
                 }
             }
+            else if (qtype == "plan") {
+                if (qterms.ContainsKey( "metric" )) {
+                    sb.Append( String.Format( "/{0}/plans", qterms["metric"] ) );
+                    qterms.Remove( "metric" );
+                }
+                else {
+                    Logr.Log( String.Format( "BuildBareQuery: qtype==plan, but no metric specified eg metric=mrr" ) );
+                    return "";
+                }
+            }
             else {
                 return "";
             }
