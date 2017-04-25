@@ -117,25 +117,25 @@ Return value: "OK" if the function succeeds, an Excel error otherwise.
 
 Parameters
 
-* ``QueryKey``: should match the QueryKey given to `s2baremetrics`.
+* ``QueryKey``: should match the QueryKey given to **s2baremetrics**.
 * ``Date``: Baremetrics result sets are keyed on date; think of date as picking out a row. You should supply a
-  string in yyyy-MM-dd format, or use the `s2today` function. Don't use Excel's volatile `TODAY` function as 
+  string in ``yyyy-MM-dd`` format, or use the ``s2today`` function. Don't use Excel's volatile ``TODAY`` function as 
   you'll cause an endless recalc cycle.
-* ``Field``: pick out a column in the result set row selected by `Date`.
+* ``Field``: pick out a column in the result set row selected by ``Date``.
 * ``Trigger``: an optional trigger. The value isn't used inside the function, but a change in the input can
   be used to force repeat execution. 
 
 Return value: a value from the result set, or #N/A.
 
-**s2vbcache**: a volatile version of s2bcache.
+**s2vbcache**: a volatile version of **s2bcache**.
 
 Parameters
 
-* ``QueryKey``: should match the QueryKey given to `s2tiingo`.
+* ``QueryKey``: should match the QueryKey given to **s2baremetrics**.
 * ``Date``: Baremetrics result sets are keyed on date; think of date as picking out a row. You should supply a
-  string in yyyy-MM-dd format, or use the `s2today` function. Don't use Excel's volatile `TODAY` function as 
+  string in ``yyyy-MM-dd`` format, or use the **s2today** function. Don't use Excel's volatile ``TODAY`` function as 
   you'll cause an endless recalc cycle.
-* ``Field``: pick out a column in the result set row selected by `Date`.
+* ``Field``: pick out a column in the result set row selected by ``Date``.
 
 Return value: a value from the result set, or #N/A.
 
