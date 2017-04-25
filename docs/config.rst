@@ -77,22 +77,15 @@ for concrete illustrations of the guidelines below.
       or ``metric``. For a qtype of ``plan`` or ``metric`` you need a following key/value
       pair that specifies which metric. The key, in column F should be ``metric``, and
       then in column G you should specify ``mrr``, `arpu``, ``ltv`` or any of the available
-      metrics. Finally, columns J, K, L & M can be used to specify ``start_date`` and ``end_date``
+      metrics. Columns J, K, L & M can be used to specify ``start_date`` and ``end_date``
       with the date values in columns K and M supplied by ``s2today`` or handcoded yyy-MM-dd
       strings. Don't use Excel's own `TODAY` function for these as it's volatile and will
-      cause an endless calc cycle.
-    * ``config``: column pairs from  C & D onwards are reserved for name value pairs that
-      apply to all queries or Tiingo web socket connections (see twebsock below). 
-      Supported config keys are...
-      
-      * ``auth_token``: put ``auth_token`` in column C, and your actual key in column D
-        for it to be added to all queries or used by twebsock.
-      * ``http_proxy_host``: if this appears in column C then column D should give a proxy
-        hostname. SSAddin will then connect via the proxy rather than direct to the internet.
-      * ``http_proxy_port``: port for the proxy connection.
-      * ``http_proxy_user``: user name for the proxy connection. Often this is in DOMAIN\USER
-        format for Windows Active Directory user IDs.
-      * ``http_proxy_password``: password for the proxy connection.      
+      cause an endless calc cycle. Finally, if you're testing against the Sandbox API
+      put ``sandbox`` in column L and ``TRUE`` in column M and ensure you have your
+      Sandbox API key in SSAddin.xll.config. Don't forget to remove ``sandbox:TRUE`` and switch
+      the API key in SSAddin.xll.config when you've finished testing!
+    * ``config``: column pairs from  C & D onwards are reserved HTTP proxy settings. See details
+      for ``tiingo`` above.
       
   * ``twebsock``: when column B contains ``tiingo`` then column C specifies a ``SockKey`` to pass
     to ``s2twebsock``. Column D should give the URL for the Tiingo API socket eg ``wss://api.tiingo.com/iex``
