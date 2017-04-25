@@ -3,11 +3,12 @@ Installing The SpreadServe Addin
 
 **Installing the addin for the first time**
 
-* Get the zip from https://github.com/SpreadServe/SSAddin
-* Unzip the download and install src/bin/Release/SSAddin.xll as an Excel addin.
+* Get the XLL from http://spreadserve.com/s3/downloads.html or source from https://github.com/SpreadServe/SSAddin
+* Install SSAddin.xll as an Excel addin.
   
   * Use SSAddin64.xll if you're running a 64 bit Excel.
   * Watch this video if you're unsure about adding an addin https://www.youtube.com/watch?v=i_sijj1NZFM
+  * Put SSAddin.xll.config in the same directory as SSAddin.xll, and edit it to add Tiingo, Quandl and Baremetrics keys if you use those services.
   
 * Create a new sheet, or load one of the test sheets to check that the addin is loaded.
 
