@@ -47,6 +47,7 @@ namespace SSAddin
 
         protected GoogleAnalyticsAPI(string keyPath, string accountEmailAddress)
         {
+            // "notasecret" is the default password Google supplies when you generate a P12 for a service account
             var certificate = new X509Certificate2(keyPath, "notasecret", X509KeyStorageFlags.Exportable);
             var credentials = new ServiceAccountCredential(
                new ServiceAccountCredential.Initializer(accountEmailAddress) {

@@ -107,8 +107,8 @@ namespace SSAddin {
             [ExcelArgument(Name = "QueryKey", Description = "Google Analytics query key in s2cfg!C")] string qkey,
             [ExcelArgument(Name = "Trigger", Description = "dummy to trigger recalc")] object trigger)
         {
-            String url = s_ConfigSheet.GetQueryURL("ganalytics", qkey);
-            if (url == null || url == "")
+            Dictionary<string, string> qterms = s_ConfigSheet.GetQueryTerms( "ganalytics", qkey );
+            if (qterms == null )
             {
                 return ExcelMissing.Value;
             }
@@ -124,10 +124,12 @@ namespace SSAddin {
             {
                 return ExcelMissing.Value;
             }
-            var req = new Dictionary<string, string>() { { "type", "ganalytics" }, { "key", qkey }, { "url", url },
-                        { "auth_token", auth_token }, { "id", service_account }};
-            s_ConfigSheet.GetProxyConfig("ganalytics", req);
-            if (s_WebClient.AddRequest(req))
+            qterms["type"] = "ganalytics";
+            qterms["key"] = qkey;
+            qterms["auth_token"] = auth_token;
+            qterms["id"] = service_account;
+            s_ConfigSheet.GetProxyConfig("ganalytics", qterms);
+            if (s_WebClient.AddRequest(qterms))
                 return s_Submitted;
             return ExcelError.ExcelErrorGettingData;
         }

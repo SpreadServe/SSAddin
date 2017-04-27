@@ -58,7 +58,7 @@ namespace SSAddin {
             return sdt.Substring( 0, 10 );
         }
 
-        public String BuildQuandlQuery( Dictionary<string, object> qterms ) {
+        public String BuildQuandlQuery( Dictionary<string, string> qterms ) {
             if ( !qterms.ContainsKey( "dataset"))
                 return "";
             StringBuilder sb = new StringBuilder( s_QuandlBaseURL);
@@ -71,7 +71,7 @@ namespace SSAddin {
                 prefix = "&";
             }
             string val;
-            foreach ( KeyValuePair<string, object> item in qterms) {
+            foreach ( KeyValuePair<string, string> item in qterms) {
                 if (s_QuandlQueryFieldConverters.ContainsKey( item.Key )) {
                     Func<object, string> converter = s_QuandlQueryFieldConverters[item.Key];
                     val = converter( item.Value );
@@ -85,7 +85,7 @@ namespace SSAddin {
             return sb.ToString( );
         }
 
-        public String BuildTiingoQuery( Dictionary<string, object> qterms ) {
+        public String BuildTiingoQuery( Dictionary<string, string> qterms ) {
             // Must specify a ticker symbol and a root (daily|funds)
             if (!qterms.ContainsKey( "ticker" ) || !qterms.ContainsKey("root"))
                 return "";
@@ -102,7 +102,7 @@ namespace SSAddin {
             if (qterms.Count > 0) {
                 string prefix = "?";
                 string val;
-                foreach (KeyValuePair<string, object> item in qterms) {
+                foreach (KeyValuePair<string, string> item in qterms) {
                     if (s_TiingoQueryFieldConverters.ContainsKey( item.Key )) {
                         Func<object, string> converter = s_TiingoQueryFieldConverters[item.Key];
                         val = converter( item.Value );
@@ -117,7 +117,7 @@ namespace SSAddin {
             return sb.ToString( );
         }
 
-        public String BuildBareQuery(Dictionary<string, object> qterms)
+        public String BuildBareQuery(Dictionary<string, string> qterms)
         {
             // Must specify a query type
             if (!qterms.ContainsKey("qtype"))
@@ -167,7 +167,7 @@ namespace SSAddin {
             {
                 string prefix = "?";
                 string val;
-                foreach (KeyValuePair<string, object> item in qterms)
+                foreach (KeyValuePair<string, string> item in qterms)
                 {
                     if (s_BareQueryFieldConverters.ContainsKey(item.Key))
                     {
@@ -202,29 +202,34 @@ namespace SSAddin {
         }
 
         public String GetQueryURL( String qtype, String qkey) {
-            // We're looking for a row that has 'quandl', 'tiingo' or 'baremetrics' in the first cell,
-            // query in the second, and then qkey in the third.
-            int row = FindRow( qtype, "query", qkey);
-            if (row == -1) {
-                Logr.Log( String.Format( "GetQueryURL: couldn't find {0}.{1}", qtype, qkey ) );
-                return "";
-            }
-            int col = 3;
-            string name;
-            object val;
-            Dictionary<string, object> qterms = new Dictionary<string, object>( );
-            do {
-                name = GetCellAsString( row, col );
-                val = GetCell( row, col + 1 );
-                if (name != null && name != "")
-                   qterms.Add( name, val );
-                col += 2;
-            } while (name != null && name != "");
+            Dictionary<string, string> qterms = GetQueryTerms( qtype, qkey );
             if ( qtype == "quandl")
                 return BuildQuandlQuery( qterms );
             if (qtype == "baremetrics")
                 return BuildBareQuery(qterms);
             return BuildTiingoQuery( qterms );
+        }
+
+        public Dictionary<string, string> GetQueryTerms( String qtype, String qkey ) {
+            // We're looking for a row that has 'quandl', 'tiingo', 'baremetrics' or ganalytics in the first cell,
+            // query in the second, and then qkey in the third.
+            int row = FindRow( qtype, "query", qkey );
+            if (row == -1) {
+                Logr.Log( String.Format( "GetQueryTerms: couldn't find {0}.{1}", qtype, qkey ) );
+                return null;
+            }
+            int col = 3;
+            string name;
+            string val;
+            Dictionary<string, string> qterms = new Dictionary<string, string>( );
+            do {
+                name = GetCellAsString( row, col );
+                val = GetCellAsString( row, col + 1 );
+                if (name != null && name != "")
+                    qterms.Add( name, val );
+                col += 2;
+            } while (name != null && name != "");
+            return qterms;
         }
 
         public String GetQueryConfig(String qtype, String ckey)
