@@ -78,7 +78,7 @@ namespace SSAddin {
         protected int               m_QuandlCount;      // total number of quandl queries
         protected int               m_TiingoCount;      // total number of tiingo queries
         protected int               m_BareCount;        // total number of baremetrics queries
-
+        protected int               m_GACount;          // total number of ganalytics queries
 
         #region Excel thread methods
 
@@ -95,6 +95,7 @@ namespace SSAddin {
             m_QuandlCount = 0;
             m_TiingoCount = 0;
             m_BareCount = 0;
+            m_GACount = 0;
 
             // Push out an RTD update for the overall quandl query count. This will mean
             // that trigger parms driven by quandl.all.count don't have #N/A as input for
@@ -123,7 +124,7 @@ namespace SSAddin {
             string type = req["type"];
             string key = req["key"];
             string fkey = String.Format( "{0}.{1}", req["type"], req["key"]);
-            bool isWebQuery = (type == "quandl" || type == "tiingo" || type == "baremetrics");
+            bool isWebQuery = (type == "quandl" || type == "tiingo" || type == "baremetrics" || type == "ganalytics");
             // Is this job pending or in progress?
             lock (m_InFlight) {
                 if (m_InFlight.Contains( fkey )) {   // Queued or running...
@@ -182,7 +183,7 @@ namespace SSAddin {
         #region Worker thread methods
 
         protected Dictionary<string,string> GetWork( ) {
-            // Put this oneliner in its own method to wrap the locking. We can't
+            // Put this one liner in its own method to wrap the locking. We can't
             // hold the lock while we're looping in BackgroundWork( ) as that
             // will prevent the Excel thread adding new requests.
             lock ( m_InputQueue) {
@@ -234,6 +235,17 @@ namespace SSAddin {
                     {
                         // run query synchronously here on background worker thread
                         bool ok = DoBareQuery(work);
+                        // query done, so remove key from inflight, which will permit
+                        // the query to be resubmitted
+                        lock (m_InFlight)
+                        {
+                            m_InFlight.Remove(fkey);
+                        }
+                    }
+                    else if (work["type"] == "ganalytics")
+                    {
+                        // run query synchronously here on background worker thread
+                        bool ok = DoGAnalyticsQuery(work);
                         // query done, so remove key from inflight, which will permit
                         // the query to be resubmitted
                         lock (m_InFlight)
@@ -472,6 +484,49 @@ namespace SSAddin {
             }
             return false;
         }
+
+        protected bool DoGAnalyticsQuery(Dictionary<string, string> work)
+        {
+            string qkey = work["key"];
+            string metrics = work["metrics"];
+            string dimensions = work["dimensions"];
+            string start_date = work["start_date"];
+            string end_date = work["end_date"];
+            string line = "";
+            string lineCount = "0";
+            try
+            {
+                int pid = Process.GetCurrentProcess().Id;
+                string csvfname = String.Format("{0}\\{1}_{2}.csv", m_TempDir, qkey, pid);
+                var csvf = new StreamWriter(csvfname);
+                Logr.Log(String.Format("running ganalytics qkey({0}) dimensions({1}) metrics({2}) start_date({3}) end_date({4}) {5}", 
+                                                                            qkey, dimensions, metrics, start_date, end_date, csvfname));
+                UpdateRTD("ganalytics", qkey, "status", "starting");
+                GoogleAnalyticsAPI gapi = GoogleAnalyticsAPI.Instance(work["auth_token"], work["id"]);
+                AnalyticDataPoint adp = gapi.GetAnalyticsData(dimensions, metrics, start_date, end_date);
+                foreach (IList<string> row in adp.Rows)
+                {
+                    csvf.WriteLine( String.Join( ",", row));
+                }
+                csvf.Close();
+                UpdateRTD("ganalytics", qkey, "status", "complete");
+                UpdateRTD("ganalytics", "all", "count", String.Format("{0}", m_GACount++));
+                Logr.Log(String.Format("ganalytics qkey({0}) complete count({1})", qkey, lineCount));
+                s_Cache.UpdateGACache(qkey, adp);
+                UpdateRTD("ganalytics", qkey, "count", String.Format("{0}", adp.Rows.Count));
+                return true;
+            }
+            catch (System.IO.IOException ex)
+            {
+                Logr.Log(String.Format("ganalytics qkey({0}) {2}", qkey, ex));
+            }
+            catch (System.Net.WebException ex)
+            {
+                Logr.Log(String.Format("ganalytics qkey({0}) {2}", qkey, ex));
+            }
+            return false;
+        }
+
         #endregion
     }
 }

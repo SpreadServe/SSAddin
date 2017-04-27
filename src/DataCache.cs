@@ -11,7 +11,7 @@ namespace SSAddin {
     // data in, and the Excel thread can pull data out. 
     class DataCache {
         protected Dictionary<string,List<String[]>> m_QCache = new Dictionary<string, List<String[]>>( );
-        // protected Dictionary<string, BareMetricsSummaryArrayElement> m_BSCache = new Dictionary<string, BareMetricsSummaryArrayElement>();
+        protected Dictionary<string, AnalyticDataPoint> m_GACache = new Dictionary<string, AnalyticDataPoint>();
         protected Dictionary<string, Dictionary<String, JObject>> m_BCache = new Dictionary<string, Dictionary<String, JObject>>( );
         protected Dictionary<string, List<SSTiingoHistPrice>> m_THPCache = new Dictionary<string, List<SSTiingoHistPrice>>( );
         protected Dictionary<string, string> m_WSCache = new Dictionary<string, string>( );
@@ -56,6 +56,14 @@ namespace SSAddin {
         public void UpdateTHPCache( string wkey, List<SSTiingoHistPrice> updates ) {
             lock (m_THPCache) {
                 m_THPCache[wkey] = updates;
+            }
+        }
+
+        public void UpdateGACache(string wkey, AnalyticDataPoint updates)
+        {
+            lock (m_GACache)
+            {
+                m_GACache[wkey] = updates;
             }
         }
 

@@ -102,6 +102,36 @@ namespace SSAddin {
             return ExcelError.ExcelErrorGettingData;
         }
 
+        [ExcelFunction(Description = "Launch Google Analytics query.")]
+        public static object s2ganalytics(
+            [ExcelArgument(Name = "QueryKey", Description = "Google Analytics query key in s2cfg!C")] string qkey,
+            [ExcelArgument(Name = "Trigger", Description = "dummy to trigger recalc")] object trigger)
+        {
+            String url = s_ConfigSheet.GetQueryURL("ganalytics", qkey);
+            if (url == null || url == "")
+            {
+                return ExcelMissing.Value;
+            }
+            // Google Analytics needs a P12 key: auth_token should give us the path
+            String auth_token = s_ConfigSheet.GetQueryConfig("ganalytics", "auth_token");
+            if (auth_token == null || auth_token == "")
+            {
+                return ExcelMissing.Value;
+            }
+            // Google Analytics needs a service account email address
+            String service_account = s_ConfigSheet.GetQueryConfig("ganalytics", "id");
+            if (service_account == null || service_account == "")
+            {
+                return ExcelMissing.Value;
+            }
+            var req = new Dictionary<string, string>() { { "type", "ganalytics" }, { "key", qkey }, { "url", url },
+                        { "auth_token", auth_token }, { "id", service_account }};
+            s_ConfigSheet.GetProxyConfig("ganalytics", req);
+            if (s_WebClient.AddRequest(req))
+                return s_Submitted;
+            return ExcelError.ExcelErrorGettingData;
+        }
+
         [ExcelFunction( Description = "Schedule cron job." )]
         public static object s2cron(
             [ExcelArgument( Name = "CronKey", Description = "cron tab key in s2cfg!C" )] string ckey)
