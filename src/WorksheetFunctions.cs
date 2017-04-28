@@ -33,7 +33,7 @@ namespace SSAddin {
         static SSWebClient  s_WebClient = SSWebClient.Instance( );
         static CronManager  s_CronMgr = CronManager.Instance( );
         static string       s_Submitted = "OK";
-        static double       s_SSAddinVersion = 0.1;
+        static double       s_SSAddinVersion = 0.42;
 		#endregion
 
         #region Regular worksheet functions
@@ -107,7 +107,7 @@ namespace SSAddin {
             [ExcelArgument(Name = "QueryKey", Description = "Google Analytics query key in s2cfg!C")] string qkey,
             [ExcelArgument(Name = "Trigger", Description = "dummy to trigger recalc")] object trigger)
         {
-            Dictionary<string, string> qterms = s_ConfigSheet.GetQueryTerms( "ganalytics", qkey );
+            Dictionary<string, string> qterms = s_ConfigSheet.GetTerms( "ganalytics", "query", qkey );
             if (qterms == null )
             {
                 return ExcelMissing.Value;
@@ -161,7 +161,8 @@ namespace SSAddin {
 
         [ExcelFunction( Description = "Connect to tiingo web socket." )]
         public static object s2twebsock( 
-            [ExcelArgument( Name = "SockKey", Description = "twebsock url key in s2cfg!C" )] string wskey ) {
+            [ExcelArgument( Name = "SockKey", Description = "twebsock url key in s2cfg!C" )] string wskey )
+        {
             Dictionary<string,string> req = s_ConfigSheet.GetTiingoWebSock( wskey);
             if ( req == null) {
                 return ExcelMissing.Value;
@@ -174,8 +175,6 @@ namespace SSAddin {
         [ExcelFunction( Description = "Pull data from S2 quandl cache.")]
 		public static object s2qcache( 
             [ExcelArgument(Name="QueryKey", Description="quandl query key in s2cfg!C")] string qkey,
-            [ExcelArgument(Name="XOffset", Description="column offset to cache position. 0 default")] int xoffset,
-            [ExcelArgument(Name="YOffset", Description="row offset to cache position. 0 default" )] int yoffset,
             [ExcelArgument(Name="Trigger", Description="dummy to trigger recalc")] object trigger)
 		{
             if ( !s_Cache.ContainsQuandlKey( qkey)) {
@@ -185,6 +184,8 @@ namespace SSAddin {
             // If offsets are supplied use them to calc cell posn too. xoffset & yoffset will default
             // to 0 if not supplied in the sheet. 
             ExcelReference caller = XlCall.Excel( XlCall.xlfCaller) as ExcelReference;
+            int xoffset = s_ConfigSheet.GetQueryConfigAsInt("quandl", qkey, "xoffset");
+            int yoffset = s_ConfigSheet.GetQueryConfigAsInt("quandl", qkey, "yoffset");
             string val = s_Cache.GetQuandlCell( qkey, caller.RowFirst-yoffset, caller.ColumnFirst-xoffset);
             if ( val == null ) {
                 return ExcelError.ExcelErrorNA; //  ExcelMissing.Value;
@@ -194,18 +195,16 @@ namespace SSAddin {
 
         [ExcelFunction( Description = "Volatile: pull data from S2 quandl cache.", IsVolatile = true )]
         public static object s2vqcache(
-            [ExcelArgument( Name = "QueryKey", Description = "quandl query key in s2cfg!C" )] string qkey,
-            [ExcelArgument( Name = "XOffset", Description = "column offset to cache position. 0 default" )] int xoffset,
-            [ExcelArgument( Name = "YOffset", Description = "row offset to cache position. 0 default" )] int yoffset) {
-            return s2qcache( qkey, xoffset, yoffset, null );
+            [ExcelArgument( Name = "QueryKey", Description = "quandl query key in s2cfg!C" )] string qkey)
+        {
+            return s2qcache( qkey, null );
         }
 
         [ExcelFunction( Description = "Pull data from S2 tiingo cache." )]
         public static object s2tcache(
             [ExcelArgument( Name = "QueryKey", Description = "tiingo query key in s2cfg!C" )] string qkey,
-            [ExcelArgument( Name = "XOffset", Description = "column offset to cache position. 0 default" )] int xoffset,
-            [ExcelArgument( Name = "YOffset", Description = "row offset to cache position. 0 default" )] int yoffset,
-            [ExcelArgument( Name = "Trigger", Description = "dummy to trigger recalc" )] object trigger ) {
+            [ExcelArgument( Name = "Trigger", Description = "dummy to trigger recalc" )] object trigger )
+        {
             if (!s_Cache.ContainsTiingoKey( qkey )) {
                 return ExcelMissing.Value;
             }
@@ -213,6 +212,8 @@ namespace SSAddin {
             // If offsets are supplied use them to calc cell posn too. xoffset & yoffset will default
             // to 0 if not supplied in the sheet. 
             ExcelReference caller = XlCall.Excel( XlCall.xlfCaller ) as ExcelReference;
+            int xoffset = s_ConfigSheet.GetQueryConfigAsInt("tiingo", qkey, "xoffset");
+            int yoffset = s_ConfigSheet.GetQueryConfigAsInt("tiingo", qkey, "yoffset");
             string val = s_Cache.GetTiingoCell( qkey, caller.RowFirst - yoffset, caller.ColumnFirst - xoffset );
             if (val == null) {
                 return ExcelError.ExcelErrorNA; //  ExcelMissing.Value;
@@ -222,10 +223,39 @@ namespace SSAddin {
 
         [ExcelFunction( Description = "Volatile: pull data from S2 tiingo cache.", IsVolatile = true )]
         public static object s2vtcache(
-            [ExcelArgument( Name = "QueryKey", Description = "quandl query key in s2cfg!C" )] string qkey,
-            [ExcelArgument( Name = "XOffset", Description = "column offset to cache position. 0 default" )] int xoffset,
-            [ExcelArgument( Name = "YOffset", Description = "row offset to cache position. 0 default" )] int yoffset ) {
-            return s2tcache( qkey, xoffset, yoffset, null );
+            [ExcelArgument( Name = "QueryKey", Description = "quandl query key in s2cfg!C" )] string qkey)
+        {
+            return s2tcache( qkey, null );
+        }
+
+        [ExcelFunction(Description = "Pull data from S2 Google Analytics cache.")]
+        public static object s2gacache(
+            [ExcelArgument(Name = "QueryKey", Description = "ganalytics query key in s2cfg!C")] string qkey,
+            [ExcelArgument(Name = "Trigger", Description = "dummy to trigger recalc")] object trigger)
+        {
+            if (!s_Cache.ContainsGAnalyticsKey(qkey))
+            {
+                return ExcelMissing.Value;
+            }
+            // Figure out our caller's posn in the sheet; that's the cell we'll pull from the cache.
+            // If offsets are supplied use them to calc cell posn too. xoffset & yoffset will default
+            // to 0 if not supplied in the sheet. 
+            ExcelReference caller = XlCall.Excel(XlCall.xlfCaller) as ExcelReference;
+            int xoffset = s_ConfigSheet.GetQueryConfigAsInt("ganalytics", qkey, "xoffset");
+            int yoffset = s_ConfigSheet.GetQueryConfigAsInt("ganalytics", qkey, "yoffset");
+            string val = s_Cache.GetGAnalyticsCell(qkey, caller.RowFirst - yoffset, caller.ColumnFirst - xoffset);
+            if (val == null)
+            {
+                return ExcelError.ExcelErrorNA; //  ExcelMissing.Value;
+            }
+            return val;
+        }
+
+        [ExcelFunction(Description = "Volatile: pull data from S2 Google Analytics cache.", IsVolatile = true)]
+        public static object s2vgacache(
+            [ExcelArgument(Name = "QueryKey", Description = "ganalytics query key in s2cfg!C")] string qkey)
+        {
+            return s2gacache(qkey, null);
         }
 
         [ExcelFunction( Description = "Pull data from S2 baremetrics cache." )]

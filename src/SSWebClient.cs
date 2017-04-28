@@ -492,7 +492,6 @@ namespace SSAddin {
             string dimensions = work["dimensions"];
             string start_date = work["start_date"];
             string end_date = work["end_date"];
-            string line = "";
             string lineCount = "0";
             try
             {
@@ -518,11 +517,11 @@ namespace SSAddin {
             }
             catch (System.IO.IOException ex)
             {
-                Logr.Log(String.Format("ganalytics qkey({0}) {2}", qkey, ex));
+                Logr.Log(String.Format("ganalytics qkey({0}) {1}", qkey, ex));
             }
             catch (System.Net.WebException ex)
             {
-                Logr.Log(String.Format("ganalytics qkey({0}) {2}", qkey, ex));
+                Logr.Log(String.Format("ganalytics qkey({0}) {1}", qkey, ex));
             }
             return false;
         }

@@ -185,10 +185,11 @@ namespace SSAddin {
             return sb.ToString();
         }
 
-        public int FindRow( string c0, string c1, string c2) {
+        public int FindRow( string c0, string c1, string c2, int startRow = 0)
+        {
             // We're looking for a row that has c0 in the first cell, c1 in the second,
             // and then c2 in the third.
-            int row = 0;
+            int row = startRow;
             string a, b, c;
             do {    // keep going as long as the first field in a row isn't empty
                 a = GetCellAsString( row, 0 );
@@ -201,8 +202,23 @@ namespace SSAddin {
             return -1;
         }
 
+        public int FindRow(string c0, string c1, string c2, string c3)
+        {
+            // We're looking for a row that has c0 in the first cell, c1 in the second,
+            // c2 in the third and c3 in the fourth
+            string d;
+            int row = FindRow(c0, c1, c2, 0);
+            while ( row != -1) {
+                d = GetCellAsString(row, 3);
+                if (d == c3)
+                    return row;
+                row = FindRow(c0, c1, c2, row + 1);
+            }
+            return row;
+        }
+
         public String GetQueryURL( String qtype, String qkey) {
-            Dictionary<string, string> qterms = GetQueryTerms( qtype, qkey );
+            Dictionary<string, string> qterms = GetTerms( qtype, "query", qkey );
             if ( qtype == "quandl")
                 return BuildQuandlQuery( qterms );
             if (qtype == "baremetrics")
@@ -210,23 +226,28 @@ namespace SSAddin {
             return BuildTiingoQuery( qterms );
         }
 
-        public Dictionary<string, string> GetQueryTerms( String qtype, String qkey ) {
+        public Dictionary<string, string> GetTerms( String qtype, String col2, String qkey ) {
             // We're looking for a row that has 'quandl', 'tiingo', 'baremetrics' or ganalytics in the first cell,
             // query in the second, and then qkey in the third.
-            int row = FindRow( qtype, "query", qkey );
+            int row = FindRow( qtype, col2, qkey );
             if (row == -1) {
-                Logr.Log( String.Format( "GetQueryTerms: couldn't find {0}.{1}", qtype, qkey ) );
+                Logr.Log( String.Format( "GetTerms: couldn't find {0} {1} {2}", qtype, col2, qkey ) );
                 return null;
             }
+            return GetKeyValPairs( row);
+        }
+
+        protected Dictionary<string, string> GetKeyValPairs( int row)
+        {
             int col = 3;
             string name;
             string val;
-            Dictionary<string, string> qterms = new Dictionary<string, string>( );
+            Dictionary<string, string> qterms = new Dictionary<string, string>();
             do {
-                name = GetCellAsString( row, col );
-                val = GetCellAsString( row, col + 1 );
+                name = GetCellAsString(row, col);
+                val = GetCellAsString(row, col + 1);
                 if (name != null && name != "")
-                    qterms.Add( name, val );
+                    qterms.Add(name, val);
                 col += 2;
             } while (name != null && name != "");
             return qterms;
@@ -234,6 +255,8 @@ namespace SSAddin {
 
         public String GetQueryConfig(String qtype, String ckey)
         {
+            // Get config for all queries of type qtype. For instance,
+            // the auth_key for all quandl queries.
             string xkey = String.Format("{0}.{1}", qtype, ckey);
             if (m_ConfigCache.ContainsKey(xkey))
             {
@@ -261,6 +284,46 @@ namespace SSAddin {
             Logr.Log( String.Format( "GetQueryConfig: returning row {0} col 3 value:{1}", row, val ) );
             m_ConfigCache[xkey] = val;
             return val;
+        }
+
+        public int GetQueryConfigAsInt(String qtype, String qkey, String ckey)
+        {
+            // Get config for a specific query qkey, rather than all queries of type qtype.
+            // For example, get xoffset (ckey) for a ganalytics (qtype) query called
+            // metrics1 (qkey).
+            int rv = 0;
+            string xkey = String.Format("{0}.{1}.{2}", qtype, qkey, ckey);
+            if (m_ConfigCache.ContainsKey(xkey)) {
+                if (Int32.TryParse(m_ConfigCache[xkey], out rv))
+                    return rv;
+            }
+            // Look for config in .Net .config file too. Could be auth_token or http_proxy,
+            // because we don't want to expose it in the sheet, and we don't want to repeat
+            // in info in every sheet.
+            string token = ConfigurationManager.AppSettings.Get(xkey);
+            if (token != null && token != "") {
+                m_ConfigCache[xkey] = token;
+                if (Int32.TryParse(token, out rv))
+                    Logr.Log(String.Format("GetQueryConfigAsInt: using ssaddin.xll.config for {0}:{1}", xkey, token));
+                else 
+                    Logr.Log(String.Format("GetQueryConfigAsInt: INT ERROR ssaddin.xll.config for {0}:{1}", xkey, token));
+                return rv;
+            }
+            // We're looking for a row that has qtype [quandl|tiingo] in the first cell, config in the second,
+            // and then qkey in the third.
+            int row = FindRow(qtype, "config", qkey, ckey);
+            if (row != -1) {
+                string val = GetCellAsString(row, 4);
+                m_ConfigCache[xkey] = val;
+                if (Int32.TryParse(val, out rv)) {
+                    Logr.Log(String.Format("GetQueryConfigAsInt: returning row {0} col 4 value:{1}", row, val));
+                    return rv;
+                }
+                Logr.Log(String.Format("GetQueryConfigAsInt: INT ERROR row {0} col 3 value:{1}", row, val));
+                // Caching "" as a value will ensure we get this logged once only
+                m_ConfigCache[xkey] = "";
+            }
+            return rv;
         }
 
         public Tuple<String,DateTime?,DateTime?> GetCronTab( String ctabkey ) {

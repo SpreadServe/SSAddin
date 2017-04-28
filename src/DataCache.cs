@@ -114,6 +114,13 @@ namespace SSAddin {
             }
         }
 
+        public bool ContainsGAnalyticsKey(string qkey)
+        {
+            lock (m_GACache) {
+                return m_GACache.ContainsKey(qkey);
+            }
+        }
+
         public bool ContainsBareKey( string qkey ) {
             lock (m_BCache) {
                 return m_BCache.ContainsKey( qkey );
@@ -126,7 +133,6 @@ namespace SSAddin {
                     m_THPCache.Remove( qkey );
             }
         }
-
 
         public string GetQuandlCell( string qkey, int row, int col ) {
             lock (m_QCache) {
@@ -156,6 +162,21 @@ namespace SSAddin {
                     return null;
                 PropertyInfo pi = piarr[col];
                 return pi.GetValue( thp, BindingFlags.Default, null, null, null).ToString( );
+            }
+        }
+
+        public string GetGAnalyticsCell(string qkey, int row, int col)
+        {
+            lock (m_GACache) {
+                if (!m_GACache.ContainsKey(qkey))
+                    return null;
+                AnalyticDataPoint adp = m_GACache[qkey];
+                if (row >= adp.Rows.Count)
+                    return null;
+                IList<string> record = adp.Rows[row];
+                if (col >= record.Count)
+                    return null;
+                return record[col];
             }
         }
 
