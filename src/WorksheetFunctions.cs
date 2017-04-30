@@ -243,7 +243,8 @@ namespace SSAddin {
             ExcelReference caller = XlCall.Excel(XlCall.xlfCaller) as ExcelReference;
             int xoffset = s_ConfigSheet.GetQueryConfigAsInt("ganalytics", qkey, "xoffset");
             int yoffset = s_ConfigSheet.GetQueryConfigAsInt("ganalytics", qkey, "yoffset");
-            string val = s_Cache.GetGAnalyticsCell(qkey, caller.RowFirst - yoffset, caller.ColumnFirst - xoffset);
+            bool headers = Convert.ToBoolean( s_ConfigSheet.GetQueryConfigAsInt( "ganalytics", qkey, "headers" ));
+            string val = s_Cache.GetGAnalyticsCell(qkey, caller.RowFirst - yoffset, caller.ColumnFirst - xoffset, headers);
             if (val == null)
             {
                 return ExcelError.ExcelErrorNA; //  ExcelMissing.Value;

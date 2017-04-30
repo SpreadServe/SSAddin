@@ -165,12 +165,26 @@ namespace SSAddin {
             }
         }
 
-        public string GetGAnalyticsCell(string qkey, int row, int col)
+        public string GetGAnalyticsCell(string qkey, int row, int col, bool hdrs)
         {
             lock (m_GACache) {
                 if (!m_GACache.ContainsKey(qkey))
                     return null;
+                if ( col < 0 || row < 0)
+                    return null;
                 AnalyticDataPoint adp = m_GACache[qkey];
+                // If headers is true, we consider the headers as row 0, and the
+                // first data record is row 1
+                if (hdrs) {
+                    if (row == 0) {
+                        if (col >= adp.ColumnHeaders.Count)
+                            return null;
+                        return adp.ColumnHeaders[col].Name;
+                    }
+                    // adjust row down: row==1 refers to row 0 in adp.Rows
+                    // when hdrs is true
+                    row = row - 1;
+                }
                 if (row >= adp.Rows.Count)
                     return null;
                 IList<string> record = adp.Rows[row];
