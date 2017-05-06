@@ -3,8 +3,19 @@
     <Reference AssemblyPath="NCrontab.dll" Pack="true" />
     <Reference AssemblyPath="Newtonsoft.Json.dll" Pack="true" />
     <Reference AssemblyPath="ExcelDna.Integration.dll" Pack="true" />
-    <Reference AssemblyPath="SuperSocket.ClientEngine.Common.dll" Pack="true" />
-    <Reference AssemblyPath="SuperSocket.ClientEngine.Core.dll" Pack="true" />
-    <Reference AssemblyPath="SuperSocket.ClientEngine.Protocol.dll" Pack="true" />
     <Reference AssemblyPath="WebSocket4Net.dll" Pack="true" />
+    <Reference AssemblyPath="Google.Apis.Analytics.v3.dll" Pack="true" />
+    <Reference AssemblyPath="Google.Apis.Auth.dll" Pack="true" />
+    <Reference AssemblyPath="Google.Apis.Auth.PlatformServices.dll" Pack="true" />
+    <Reference AssemblyPath="Google.Apis.Core.dll" Pack="true" />
+    <Reference AssemblyPath="Google.Apis.dll" Pack="true" />
+    <Reference AssemblyPath="Google.Apis.PlatformServices.dll" Pack="true" />
+    <Reference AssemblyPath="Microsoft.Threading.Tasks.dll" Pack="true" />
+    <Reference AssemblyPath="Microsoft.Threading.Tasks.Extensions.dll" Pack="true" />
+    <Reference AssemblyPath="Microsoft.Threading.Tasks.Extensions.Desktop.dll" Pack="true" />
+    <Reference AssemblyPath="Microsoft.Threading.Tasks.Extensions.dll" Pack="true" />
+    <Reference AssemblyPath="System.Net.Http.dll" Pack="true" />
+    <Reference AssemblyPath="System.Net.Http.Extensions.dll" Pack="true" />
+    <Reference AssemblyPath="System.Net.Http.Primitives.dll" Pack="true" />
+    <Reference AssemblyPath="System.Net.Http.WebRequest.dll" Pack="true" />
 </DnaLibrary>

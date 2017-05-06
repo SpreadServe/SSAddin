@@ -38,7 +38,7 @@ namespace SSAddin
         {
             if (s_Instance == null) {
                 Logr.Log(String.Format("GoogleAnalyticsAPI.Instance keypath({0}) email({1})", keypath, email));
-                s_Instance = new GoogleAnalyticsAPI( keypath, email);
+                s_Instance = new GoogleAnalyticsAPI( keypath, email );
                 var response = s_Service.Management.Profiles.List("~all", "~all").Execute();
                 s_Profiles = response.Items;
             }

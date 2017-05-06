@@ -41,6 +41,8 @@ namespace SSAddin {
             // Why doesn't the Topic class expose the topicId ?
             var topicType = typeof( Topic );
             var topicId = topicType.GetField( "TopicId", BindingFlags.GetField | BindingFlags.Instance | BindingFlags.NonPublic );
+            if (topicId == null)
+                return 0;
             int rv = (int)topicId.GetValue( topic );
             return rv;
         }
