@@ -215,14 +215,14 @@ namespace SSAddin {
                 string[] subs = field.Split( s_delimiters );
                 JToken jsub = null;
                 JArray jarr = null;
-                uint inx = 0;
+                int inx = 0;
                 bool ok = false;
                 foreach ( string sub in subs) {
                     if ( jobj != null) {
                         ok = jobj.TryGetValue( sub, out jsub );
                     }
                     else if ( jarr != null) {
-                        ok = UInt32.TryParse( sub, out inx );
+                        ok = Int32.TryParse( sub, out inx );
                         if (ok && inx < jarr.Count)
                             jsub = jarr[inx];
                         else

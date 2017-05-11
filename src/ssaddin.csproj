@@ -9,10 +9,9 @@
     <AppDesignerFolder>Properties</AppDesignerFolder>
     <RootNamespace>SSAddin</RootNamespace>
     <AssemblyName>SSAddin</AssemblyName>
-    <TargetFrameworkVersion>v4.5</TargetFrameworkVersion>
+    <TargetFrameworkVersion>v4.0</TargetFrameworkVersion>
     <FileAlignment>512</FileAlignment>
-    <TargetFrameworkProfile>
-    </TargetFrameworkProfile>
+    <TargetFrameworkProfile>Client</TargetFrameworkProfile>
     <ExcelDnaRoot>C:\osullivj\src\ExcelDna\Source</ExcelDnaRoot>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
@@ -23,7 +22,6 @@
     <DefineConstants>DEBUG;TRACE</DefineConstants>
     <ErrorReport>prompt</ErrorReport>
     <WarningLevel>4</WarningLevel>
-    <Prefer32Bit>false</Prefer32Bit>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
     <DebugType>pdbonly</DebugType>
@@ -32,14 +30,12 @@
     <DefineConstants>TRACE</DefineConstants>
     <ErrorReport>prompt</ErrorReport>
     <WarningLevel>4</WarningLevel>
-    <Prefer32Bit>false</Prefer32Bit>
   </PropertyGroup>
   <PropertyGroup>
     <StartupObject />
   </PropertyGroup>
   <ItemGroup>
-    <Reference Include="ExcelDna.Integration, Version=0.32.6334.29922, Culture=neutral, processorArchitecture=MSIL">
-      <SpecificVersion>False</SpecificVersion>
+    <Reference Include="ExcelDna.Integration">
       <HintPath>Packages\Excel-DNA.0.32.0\tools\ExcelDna.Integration.dll</HintPath>
     </Reference>
     <Reference Include="Google.Apis">
@@ -121,35 +117,25 @@
     <Content Include="SSAddin.dna">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
+    <None Include="SSAddin.xll.config">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <SubType>Designer</SubType>
+    </None>
   </ItemGroup>
   <ItemGroup />
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <PropertyGroup>
-    <PostBuildEvent>== Post build step with nuget packages
-
-echo Build 32 and 64 bit versions, using ExcelDna.xll and ExcelDna64.xll
-
-== 32 bit
-copy "$(SolutionDir)SSAddin.dna" "$(TargetDir)SSAddin.dna"
-
+    <PostBuildEvent>
+echo Build 32 and 64 bit version. using ExcelDna.xll and ExcelDna64.xll
 copy "$(ProjectDir)\Packages\Excel-DNA.0.32.0\tools\ExcelDna.xll" "$(TargetDir)SSAddin.xll"
-
 "$(ProjectDir)\Packages\Excel-DNA.0.32.0\tools\ExcelDnaPack.exe" "$(TargetDir)SSAddin.dna" /O "$(TargetDir)SSAddin-Packed.xll" /Y
-
 copy "$(TargetDir)SSAddin-Packed.xll" "$(TargetDir)SSAddin.xll" /Y
-
 del "$(TargetDir)SSAddin-Packed.xll"
 
-
-== 64 bit
 copy "$(SolutionDir)SSAddin.dna" "$(TargetDir)SSAddin64.dna"
-
 copy "$(ProjectDir)\Packages\Excel-DNA.0.32.0\tools\ExcelDna64.xll" "$(TargetDir)SSAddin64.xll"
-
 "$(ProjectDir)\Packages\Excel-DNA.0.32.0\tools\ExcelDnaPack.exe" "$(TargetDir)SSAddin64.dna" /O "$(TargetDir)SSAddin-Packed64.xll" /Y
-
 copy "$(TargetDir)SSAddin-Packed64.xll" "$(TargetDir)SSAddin64.xll" /Y
-
 del "$(TargetDir)SSAddin-Packed64.xll"
 </PostBuildEvent>
   </PropertyGroup>
