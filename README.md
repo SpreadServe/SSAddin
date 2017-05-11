@@ -7,6 +7,9 @@ You can download ready to install 32 & 64 bit binaries from [SpreadServe's downl
 ## Google Analytics
 SSAddin gives you access to Google Analytics Reporting v3 API via the s2ganalytics and s2gacache worksheet functions. See the ganalytics_sessions2.xls worksheet for an example.
 
+## Baremetrics
+SSAddin gives you access to the Baremetrics API via the s2baremetrics and s2bcache worksheet functions. See the baremetrics_summary1.xlsx worksheet for an example.
+
 ## Quandl
 quandl.com already distributes a perfectly good Excel addin, so how is SSAddin different? SSAddin uses no VBA and no GUI. It has no menu cluttering your Excel menu bar, no dialog or message boxes popping up. Everything is achieved via worksheet functions, and all network round trips are handled on a background thread so your Excel UI never blocks waiting for data to download from quandl.com.
 
