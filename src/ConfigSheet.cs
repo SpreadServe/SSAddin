@@ -25,6 +25,7 @@ namespace SSAddin {
         protected static string[] s_ProxyKeys = { "http_proxy_host", "http_proxy_port", "http_proxy_user", "http_proxy_password" };
 
         protected Dictionary<string, string> m_ConfigCache = new Dictionary<string, string>();
+        protected Dictionary<string, object> m_DefaultValueCache = new Dictionary<string, object>( );
 
         public ConfigSheet( ) {
             // Quandl and Tiingo funcs expect Excel dates. In the GUI Excel recognises the date, and converts to a number
@@ -32,10 +33,10 @@ namespace SSAddin {
             s_QuandlQueryFieldConverters["trim_end"] = ExcelDateNumberToString;
             s_TiingoQueryFieldConverters["startDate"] = ExcelDateNumberToString;
             s_TiingoQueryFieldConverters["endDate"] = ExcelDateNumberToString;
-            // For baremetrics queries date params should be supplied by s2today, which arrives in here as
-            // a string, not a number like an Excel date.
-            // s_BareQueryFieldConverters["start_date"] = ExcelDateNumberToString;
-            // s_BareQueryFieldConverters["end_date"] = ExcelDateNumberToString;
+            // For baremetrics queries date params can be supplied by s2today, which arrives in here as
+            // a string, not a number like an Excel date. Or they can be an Excel date.
+            s_BareQueryFieldConverters["start_date"] = ExcelDateNumberToString;
+            s_BareQueryFieldConverters["end_date"] = ExcelDateNumberToString;
         }
 
         public object GetCell( int row, int col ) {
@@ -51,9 +52,13 @@ namespace SSAddin {
         }
 
         public string ExcelDateNumberToString( object dn ) {
-            DateTime dt = DateTime.FromOADate( Convert.ToDouble( dn));
+            double d = 0.0;
+            string sdt = dn.ToString( );
+            if ( !Double.TryParse( sdt, out d))
+                return sdt;
+            DateTime dt = DateTime.FromOADate( d);
             // "u" format is 2008-06-15 21:15:07Z
-            string sdt = dt.ToString( "u" );
+            sdt = dt.ToString( "u" );
             // Throw away the time and just keep the date...
             return sdt.Substring( 0, 10 );
         }
@@ -148,17 +153,18 @@ namespace SSAddin {
                     return "";
                 }
             }
-            else if (qtype == "plan") {
+            else if (qtype == "plans" || qtype == "customers") {
                 if (qterms.ContainsKey( "metric" )) {
-                    sb.Append( String.Format( "/{0}/plans", qterms["metric"] ) );
+                    sb.Append( String.Format( "/{0}/{1}", qterms["metric"], qtype ) );
                     qterms.Remove( "metric" );
                 }
                 else {
-                    Logr.Log( String.Format( "BuildBareQuery: qtype==plan, but no metric specified eg metric=mrr" ) );
+                    Logr.Log( String.Format( "BuildBareQuery: qtype=={0}, but no metric specified eg metric=mrr", qtype ) );
                     return "";
                 }
             }
             else {
+                Logr.Log( String.Format( "BuildBareQuery: bad qtype=={0}", qtype ) );
                 return "";
             }
             qterms.Remove("qtype");
@@ -283,6 +289,30 @@ namespace SSAddin {
             string val = GetCellAsString( row, 3 );
             Logr.Log( String.Format( "GetQueryConfig: returning row {0} col 3 value:{1}", row, val ) );
             m_ConfigCache[xkey] = val;
+            return val;
+        }
+
+        public object GetDefaultCacheValue( String qtype, String qkey ) {
+            // Get default cache value for all qkey query type qtype. For instance,
+            // qtype=="baremetrics", qkey=="summaryQuery1"
+            string xkey = String.Format( "{0}.{1}.default_cache_value", qtype, qkey );
+            if (m_DefaultValueCache.ContainsKey( xkey )) {
+                return m_DefaultValueCache[xkey];
+            }
+            // We won't look for default cache values config in .Net .config file too. This is very much
+            // a per sheet piece of config, not per host like auth keys. We're looking for a row that has 
+            // qtype [quandl|tiingo|baremetrics] in the first cell, config in the second, qkey in the third
+            // and default_cache_value in the fourth.
+            int row = FindRow( qtype, "config", qkey, "default_cache_value" );
+            if (row == -1) {
+                Logr.Log( String.Format( "GetDefaultCacheValue: couldn't find {0}", xkey ) );
+                // Caching "" as a value will ensure we get this logged once only
+                m_DefaultValueCache[xkey] = ExcelError.ExcelErrorNA;
+                return ExcelError.ExcelErrorNA;
+            }
+            string val = GetCellAsString( row, 4 );
+            Logr.Log( String.Format( "GetDefaultCacheValue: returning row {0} col 4 value:{1}", row, val ) );
+            m_DefaultValueCache[xkey] = val;
             return val;
         }
 

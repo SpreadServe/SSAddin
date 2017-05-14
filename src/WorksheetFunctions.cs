@@ -188,7 +188,7 @@ namespace SSAddin {
             int yoffset = s_ConfigSheet.GetQueryConfigAsInt("quandl", qkey, "yoffset");
             string val = s_Cache.GetQuandlCell( qkey, caller.RowFirst-yoffset, caller.ColumnFirst-xoffset);
             if ( val == null ) {
-                return ExcelError.ExcelErrorNA; //  ExcelMissing.Value;
+                return s_ConfigSheet.GetDefaultCacheValue( "quandl", qkey );
             }
             return val;
 		}
@@ -216,7 +216,7 @@ namespace SSAddin {
             int yoffset = s_ConfigSheet.GetQueryConfigAsInt("tiingo", qkey, "yoffset");
             string val = s_Cache.GetTiingoCell( qkey, caller.RowFirst - yoffset, caller.ColumnFirst - xoffset );
             if (val == null) {
-                return ExcelError.ExcelErrorNA; //  ExcelMissing.Value;
+                return s_ConfigSheet.GetDefaultCacheValue( "tiingo", qkey );
             }
             return val;
         }
@@ -247,7 +247,7 @@ namespace SSAddin {
             string val = s_Cache.GetGAnalyticsCell(qkey, caller.RowFirst - yoffset, caller.ColumnFirst - xoffset, headers);
             if (val == null)
             {
-                return ExcelError.ExcelErrorNA; //  ExcelMissing.Value;
+                return s_ConfigSheet.GetDefaultCacheValue( "ganalytics", qkey );
             }
             return val;
         }
@@ -270,7 +270,7 @@ namespace SSAddin {
             }
             string val = s_Cache.GetBareField( qkey, s_ConfigSheet.ExcelDateNumberToString( xldate), field);
             if (val == null) {
-                return ExcelError.ExcelErrorNA; //  ExcelMissing.Value;
+                return s_ConfigSheet.GetDefaultCacheValue( "baremetrics", qkey );
             }
             return val;
         }
@@ -301,7 +301,7 @@ namespace SSAddin {
             // to 0 if not supplied in the sheet. 
             string val = s_Cache.GetWSCell( wkey, ckey);
             if (val == null) {
-                return ExcelError.ExcelErrorNA; //  ExcelMissing.Value;
+                return s_ConfigSheet.GetDefaultCacheValue( "websock", wkey );
             }
             return val;
         }
