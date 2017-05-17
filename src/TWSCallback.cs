@@ -44,9 +44,9 @@ namespace SSAddin {
         protected static String s_EventDataFormat = "\"thresholdLevel\":0,\"tickers\":[{0}]";
         protected static String s_EventDataSubIdFormat = "\"subscriptionId\":{0},\"thresholdLevel\":0,\"tickers\":[{1}]";
 
-        protected static JsonSerializerSettings s_JsonSettings = new JsonSerializerSettings( )
-        {
-            Converters = { new JsonToDictionary( ) }
+        protected static JsonSerializerSettings s_JsonSettings = new JsonSerializerSettings( ) {
+            Converters = { new JsonToDictionary( ) },
+            NullValueHandling = NullValueHandling.Ignore
         };
 
         #region Worker thread

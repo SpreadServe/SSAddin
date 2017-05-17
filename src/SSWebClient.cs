@@ -66,6 +66,11 @@ namespace SSAddin {
         protected static SSWebClient    s_Instance;
         protected static object         s_InstanceLock = new object( );
 
+        protected static JsonSerializerSettings s_JsonSettings = new JsonSerializerSettings( ) {
+            NullValueHandling = NullValueHandling.Ignore,
+            MissingMemberHandling = MissingMemberHandling.Ignore
+        };
+
         protected Queue<Dictionary<string,string>>  m_InputQueue;
         protected HashSet<String>                   m_InFlight;
         protected Dictionary<String, WSCallback>    m_WSCallbacks;
@@ -417,7 +422,7 @@ namespace SSAddin {
                 UpdateRTD( "tiingo", qkey, "status", "complete" );
                 UpdateRTD( "tiingo", "all", "count", String.Format( "{0}", m_TiingoCount++ ) );
                 Logr.Log( String.Format( "tiingo qkey({0}) complete count({1})", qkey, lineCount ) );
-                List<SSTiingoHistPrice> updates = JsonConvert.DeserializeObject<List<SSTiingoHistPrice>>( sb.ToString( ));
+                List<SSTiingoHistPrice> updates = JsonConvert.DeserializeObject<List<SSTiingoHistPrice>>( sb.ToString( ), s_JsonSettings);
                 s_Cache.UpdateTHPCache( qkey, updates );
                 UpdateRTD( "tiingo", qkey, "count", String.Format( "{0}", updates.Count) );
                 return true;
@@ -468,7 +473,6 @@ namespace SSAddin {
                 UpdateRTD("baremetrics", qkey, "status", "complete");
                 UpdateRTD("baremetrics", "all", "count", String.Format("{0}", m_BareCount++));
                 Logr.Log(String.Format("baremetrics qkey({0}) complete count({1})", qkey, lineCount));
-                // BareMetricsSummary summary = JsonConvert.DeserializeObject<BareMetricsSummary>(sb.ToString());
                 dynamic updates = JsonConvert.DeserializeObject( sb.ToString( ) );
                 s_Cache.UpdateBareCache(qkey, updates);
                 UpdateRTD("baremetrics", qkey, "count", String.Format("{0}", updates.metrics.Count));
