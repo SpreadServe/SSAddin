@@ -443,6 +443,24 @@ namespace SSAddin {
             return req;
         }
 
+        public Dictionary<String, String> GetTransficcWebSock( String wskey ) {
+            // We're looking for a row that has 'trasficc' in the first cell, marketdata in the second,
+            // and then wskey in the third.
+            int row = FindRow( "transficc", "marketdata", wskey );
+            if (row == -1) {
+                Logr.Log( String.Format( "GetTransficcWebSock: couldn't find {0}", wskey ) );
+                return null;
+            }
+            // Now we've found the right row we expect to find the url in col D
+            string url = GetCellAsString( row, 3 );
+            if (url == null) {
+                Logr.Log( String.Format( "GetTransficcWebSock: bad url wskey({0})", wskey ) );
+                return null;
+            }
+            var req = new Dictionary<string, string>( ) { { "type", "transficc" }, { "key", wskey }, { "url", url }, { "subtype", "marketdata" } };
+            return req;
+        }
+
         public void GetProxyConfig(string ctype, Dictionary<string, string> req)
         {
             foreach (string key in s_ProxyKeys)

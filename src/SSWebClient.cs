@@ -73,9 +73,14 @@ namespace SSAddin {
 
         protected Queue<Dictionary<string,string>>  m_InputQueue;
         protected HashSet<String>                   m_InFlight;
-        protected Dictionary<String, WSCallback>    m_WSCallbacks;
-        protected TWSCallback                       m_TWSCallback;
+        protected Dictionary<String, WSCallback>    m_WSCallbacks;      // Emulates SpreadServe JS webpage
+        protected TWSCallback                       m_TWSCallback;      // Tiingo API client
+        protected TFWSCallback                      m_TFWSCallback;     // transficc client
+
+        // If s2sub( ) creates subscription requests before s2twebsock( ) or
+        // s2tranficc( ) has been called queue them up in these caches
         protected List<Dictionary<string, string>>  m_PendingTiingoSubs;
+        protected List<Dictionary<string, string>>  m_PendingTransficcSubs;
 
         protected Thread            m_WorkerThread;     // for executing the web query
         protected ManualResetEvent  m_Event;            // control worker thread sleep
@@ -95,6 +100,7 @@ namespace SSAddin {
             m_WSCallbacks = new Dictionary<string, WSCallback>( );
             m_Event = new ManualResetEvent( false);
             m_PendingTiingoSubs = new List<Dictionary<string, string>>( );
+            m_PendingTransficcSubs = new List<Dictionary<string, string>>( );
             m_WorkerThread = new Thread( BackgroundWork );
             m_WorkerThread.Start( );
             m_QuandlCount = 0;
@@ -183,6 +189,15 @@ namespace SSAddin {
             }
         }
 
+        protected void TFWSCallbackClosed( string wskey ) {
+            lock (m_InFlight) {
+                // releasing the existing tiingo websock callback handler enables the 
+                // BackgroundWork method to create another one
+                m_InFlight.Remove( wskey );
+                m_TFWSCallback = null;
+            }
+        }
+
         #endregion
 
         #region Worker thread methods
@@ -216,7 +231,7 @@ namespace SSAddin {
                         return;
                     }
                     string fkey = String.Format("{0}.{1}", work["type"], work["key"]);
-                    Logr.Log(String.Format("~A BackgroundWork new request fkey({0})", fkey));
+                    Logr.Log(String.Format("~A BackgroundWork new request flight_key({0})", fkey));
 
                     if (work["type"] == "quandl") {
                         // run query synchronously here on background worker thread
@@ -285,6 +300,22 @@ namespace SSAddin {
                             }
                         }
                     }
+                    else if (work["type"] == "transficc") {
+                        // We don't want to remove the inflight key here as there will be
+                        // async callbacks to TFWSCallback on pool threads when updates
+                        // arrive on the tiingo websock. So we leave the key in place to
+                        // prevent AddRequest, which is on the Excel thread, creating 
+                        // a request for a new TFWSCallback. 
+                        lock (m_InFlight) {
+                            if (m_TFWSCallback == null) {
+                                m_TFWSCallback = new TFWSCallback( work, this.TFWSCallbackClosed );
+                                if (m_PendingTransficcSubs.Count > 0) {
+                                    m_TFWSCallback.AddSubscriptions( m_PendingTransficcSubs );
+                                    m_PendingTransficcSubs.Clear( );
+                                }
+                            }
+                        }
+                    }
                     else if (work["type"] == "s2sub") {
                         if (work["subcache"] == "twebsock") {
                             // New subscription to a tiingo websock. If the TWSCallback
@@ -294,6 +325,17 @@ namespace SSAddin {
                                 if (m_TWSCallback != null) {
                                     m_TWSCallback.AddSubscriptions(m_PendingTiingoSubs);
                                     m_PendingTiingoSubs.Clear();
+                                }
+                            }
+                        }
+                        else if (work["subcache"] == "transficc") {
+                            // New subscription to a transficc websock. If the TFWSCallback
+                            // doesn't exist yet cache it, but if it does pass it through
+                            lock (m_InFlight) {
+                                m_PendingTransficcSubs.Add( work );
+                                if (m_TFWSCallback != null) {
+                                    m_TFWSCallback.AddSubscriptions( m_PendingTransficcSubs );
+                                    m_PendingTransficcSubs.Clear( );
                                 }
                             }
                         }

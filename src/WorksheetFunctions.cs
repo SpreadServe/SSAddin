@@ -172,6 +172,18 @@ namespace SSAddin {
             return ExcelError.ExcelErrorValue;
         }
 
+        [ExcelFunction( Description = "Connect to transficc web socket." )]
+        public static object s2transficc(
+            [ExcelArgument( Name = "SockKey", Description = "transficc url key in s2cfg!C" )] string wskey ) {
+            Dictionary<string, string> req = s_ConfigSheet.GetTransficcWebSock( wskey );
+            if (req == null) {
+                return ExcelMissing.Value;
+            }
+            if (s_WebClient.AddRequest( req ))
+                return s_Submitted;
+            return ExcelError.ExcelErrorValue;
+        }
+
         [ExcelFunction( Description = "Pull data from S2 quandl cache.")]
 		public static object s2qcache( 
             [ExcelArgument(Name="QueryKey", Description="quandl query key in s2cfg!C")] string qkey,
