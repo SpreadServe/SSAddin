@@ -38,8 +38,9 @@
     <StartupObject />
   </PropertyGroup>
   <ItemGroup>
-    <Reference Include="ExcelDna.Integration">
-      <HintPath>Packages\Excel-DNA.0.32.0\tools\ExcelDna.Integration.dll</HintPath>
+    <Reference Include="ExcelDna.Integration, Version=0.32.6334.29922, Culture=neutral, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>Packages\ExcelDna.Integration.0.34.6\lib\ExcelDna.Integration.dll</HintPath>
     </Reference>
     <Reference Include="Google.Apis">
       <HintPath>Packages\Google.Apis.1.9.0\lib\net40\Google.Apis.dll</HintPath>
@@ -132,14 +133,14 @@
   <PropertyGroup>
     <PostBuildEvent>
 echo Build 32 and 64 bit version. using ExcelDna.xll and ExcelDna64.xll
-copy "$(ProjectDir)\Packages\Excel-DNA.0.32.0\tools\ExcelDna.xll" "$(TargetDir)SSAddin.xll"
-"$(ProjectDir)\Packages\Excel-DNA.0.32.0\tools\ExcelDnaPack.exe" "$(TargetDir)SSAddin.dna" /O "$(TargetDir)SSAddin-Packed.xll" /Y
+copy "$(ProjectDir)\Packages\ExcelDna.AddIn.0.34.6\tools\ExcelDna.xll" "$(TargetDir)SSAddin.xll"
+"$(ProjectDir)\Packages\ExcelDna.AddIn.0.34.6\tools\ExcelDnaPack.exe" "$(TargetDir)SSAddin.dna" /O "$(TargetDir)SSAddin-Packed.xll" /Y
 copy "$(TargetDir)SSAddin-Packed.xll" "$(TargetDir)SSAddin.xll" /Y
 del "$(TargetDir)SSAddin-Packed.xll"
 
 copy "$(SolutionDir)SSAddin.dna" "$(TargetDir)SSAddin64.dna"
-copy "$(ProjectDir)\Packages\Excel-DNA.0.32.0\tools\ExcelDna64.xll" "$(TargetDir)SSAddin64.xll"
-"$(ProjectDir)\Packages\Excel-DNA.0.32.0\tools\ExcelDnaPack.exe" "$(TargetDir)SSAddin64.dna" /O "$(TargetDir)SSAddin-Packed64.xll" /Y
+copy "$(ProjectDir)\Packages\ExcelDna.AddIn.0.34.6\tools\ExcelDna64.xll" "$(TargetDir)SSAddin64.xll"
+"$(ProjectDir)\Packages\ExcelDna.AddIn.0.34.6\tools\ExcelDnaPack.exe" "$(TargetDir)SSAddin64.dna" /O "$(TargetDir)SSAddin-Packed64.xll" /Y
 copy "$(TargetDir)SSAddin-Packed64.xll" "$(TargetDir)SSAddin64.xll" /Y
 del "$(TargetDir)SSAddin-Packed64.xll"
 </PostBuildEvent>
