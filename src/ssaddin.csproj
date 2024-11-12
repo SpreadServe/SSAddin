@@ -112,9 +112,7 @@
     <Compile Include="RTDServer.cs" />
     <Compile Include="ConfigSheet.cs" />
     <Compile Include="SSWebClient.cs" />
-    <Compile Include="TFWSCallback.cs" />
     <Compile Include="TiingoRealTimeMessageHandler.cs" />
-    <Compile Include="TransficcRealTimeMessageHandler.cs" />
     <Compile Include="TWSCallback.cs" />
     <Compile Include="WorksheetFunctions.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
